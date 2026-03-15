@@ -53,41 +53,46 @@ export default function RootLayout({
         <link rel="icon" href="/images/hero-bg.png" type="image/png" />
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // Disable right click
-            document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+            var devMode = sessionStorage.getItem('__devmode') === '1';
 
-            // Disable keyboard shortcuts
+            // Ctrl+X => toggle developer mode
             document.addEventListener('keydown', function(e) {
-              // F12
+              if (e.ctrlKey && (e.key === 'x' || e.key === 'X')) {
+                e.preventDefault();
+                devMode = !devMode;
+                if (devMode) {
+                  sessionStorage.setItem('__devmode', '1');
+                  console.clear();
+                  console.log('%c✅ Developer Mode ON', 'color: #00ff88; font-size: 16px; font-weight: bold;');
+                } else {
+                  sessionStorage.removeItem('__devmode');
+                  console.log('%c🔒 Developer Mode OFF', 'color: #ff4444; font-size: 16px;');
+                }
+                return;
+              }
+
+              if (devMode) return; // allow all shortcuts in dev mode
+
+              // Block shortcuts for normal users
               if (e.key === 'F12') { e.preventDefault(); return false; }
-              // Ctrl+Shift+I / Cmd+Option+I
-              if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) { e.preventDefault(); return false; }
-              // Ctrl+Shift+J
-              if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'J' || e.key === 'j')) { e.preventDefault(); return false; }
-              // Ctrl+Shift+C
-              if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'C' || e.key === 'c')) { e.preventDefault(); return false; }
-              // Ctrl+U (view source)
-              if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) { e.preventDefault(); return false; }
-              // Ctrl+S (save page)
-              if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's')) { e.preventDefault(); return false; }
-              // Ctrl+A (select all)
-              if ((e.ctrlKey || e.metaKey) && (e.key === 'A' || e.key === 'a')) { e.preventDefault(); return false; }
+              if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) { e.preventDefault(); return false; }
+              if ((e.ctrlKey || e.metaKey) && ['U','u','S','s','A','a'].includes(e.key)) { e.preventDefault(); return false; }
             });
 
-            // Disable text selection
-            document.addEventListener('selectstart', function(e) { e.preventDefault(); });
+            // Disable right click (skip in dev mode)
+            document.addEventListener('contextmenu', function(e) {
+              if (!devMode) e.preventDefault();
+            });
 
-            // Disable drag
-            document.addEventListener('dragstart', function(e) { e.preventDefault(); });
+            // Disable text selection & drag (skip in dev mode)
+            document.addEventListener('selectstart', function(e) { if (!devMode) e.preventDefault(); });
+            document.addEventListener('dragstart', function(e) { if (!devMode) e.preventDefault(); });
 
-            // DevTools detection - redirect if opened
+            // DevTools detection (skip in dev mode)
             var devtools = { open: false };
-            var threshold = 160;
             setInterval(function() {
-              if (
-                window.outerWidth - window.innerWidth > threshold ||
-                window.outerHeight - window.innerHeight > threshold
-              ) {
+              if (devMode) { devtools.open = false; return; }
+              if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
                 if (!devtools.open) {
                   devtools.open = true;
                   document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;color:#fff;font-size:24px;font-family:sans-serif;">⛔ Access Denied</div>';
