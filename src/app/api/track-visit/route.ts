@@ -10,7 +10,9 @@ export async function POST(request: NextRequest) {
     const isNew = !visitorId
     if (!visitorId) visitorId = crypto.randomUUID()
 
-    await db.$executeRaw`INSERT INTO SiteVisit (id, visitorId, path, createdAt) VALUES (${crypto.randomUUID()}, ${visitorId}, ${path || '/'}, ${new Date().toISOString()})`
+    await db.siteVisit.create({
+      data: { id: crypto.randomUUID(), visitorId, path: path || '/' }
+    })
 
     const res = NextResponse.json({ success: true })
     if (isNew) {
