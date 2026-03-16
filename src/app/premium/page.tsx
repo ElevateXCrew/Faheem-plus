@@ -12,6 +12,57 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Lock, Crown, ArrowRight, Image as ImageIcon, Video, Play, Eye, X, Heart } from 'lucide-react'
 
+// Detect URL type and return embed URL
+function getEmbedUrl(url: string): { type: 'youtube' | 'drive' | 'vimeo' | 'direct', embedUrl: string } {
+  if (!url) return { type: 'direct', embedUrl: url }
+
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/)
+  if (ytMatch) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1` }
+
+  // Google Drive
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
+  if (driveMatch) return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview` }
+  if (url.includes('drive.google.com/open?id=')) {
+    const id = url.split('id=')[1]?.split('&')[0]
+    if (id) return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${id}/preview` }
+  }
+
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeoMatch) return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1` }
+
+  // Direct file or /uploads/ path
+  return { type: 'direct', embedUrl: url }
+}
+
+function VideoPlayer({ url, thumbnail }: { url: string, thumbnail?: string | null }) {
+  const { type, embedUrl } = getEmbedUrl(url)
+
+  if (type === 'direct') {
+    return (
+      <video
+        src={embedUrl}
+        poster={thumbnail || undefined}
+        controls
+        autoPlay
+        className="w-full max-h-[80vh] rounded-lg bg-black"
+      />
+    )
+  }
+
+  return (
+    <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ paddingTop: '56.25%' }}>
+      <iframe
+        src={embedUrl}
+        className="absolute inset-0 w-full h-full"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )
+}
+
 interface UserData {
   hasActiveSubscription: boolean
   currentSubscription: { status: string; plan: { name: string } } | null
@@ -345,7 +396,7 @@ export default function PremiumPage() {
                   </button>
                   <div className="max-w-4xl w-full" onClick={e => e.stopPropagation()}>
                     {selectedItem.contentType === 'video' ? (
-                      <video src={selectedItem.imageUrl} poster={selectedItem.thumbnailUrl} controls autoPlay className="w-full max-h-[80vh] rounded-lg" />
+                      <VideoPlayer url={selectedItem.imageUrl} thumbnail={selectedItem.thumbnailUrl} />
                     ) : (
                       <img src={selectedItem.imageUrl} alt={selectedItem.title} className="w-full max-h-[80vh] object-contain rounded-lg" />
                     )}

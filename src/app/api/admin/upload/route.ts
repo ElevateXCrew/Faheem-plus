@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { verifyAdminAuth } from '../helpers'
 
@@ -14,33 +15,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+    const isVideo = file.type.startsWith('video/')
+    const isImage = file.type.startsWith('image/')
+
+    if (!isImage && !isVideo) {
       return NextResponse.json({ error: 'Only image or video files allowed' }, { status: 400 })
     }
 
-    const maxSize = file.type.startsWith('video/') ? 500 * 1024 * 1024 : 10 * 1024 * 1024
+    // Free content mein video allowed nahi
+    const isPremium = formData.get('isPremium')
+    if (isVideo && isPremium !== 'true') {
+      return NextResponse.json({ error: 'Videos only allowed for premium content' }, { status: 400 })
+    }
+
+    const maxSize = isVideo ? 500 * 1024 * 1024 : 10 * 1024 * 1024
     if (file.size > maxSize) {
-      return NextResponse.json({ error: `File size must be less than ${file.type.startsWith('video/') ? '500MB' : '10MB'}` }, { status: 400 })
+      return NextResponse.json({ error: `File too large. Max: ${isVideo ? '500MB' : '10MB'}` }, { status: 400 })
     }
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const ext = file.name.split('.').pop()
-    const folder = file.type.startsWith('video/') ? 'videos' : 'gallery'
-    const filename = `${folder}-${Date.now()}.${ext}`
-    const path = join(process.cwd(), 'public', 'uploads', folder, filename)
+    if (isVideo) {
+      // Videos: save to disk
+      const ext = file.name.split('.').pop() || 'mp4'
+      const filename = `video-${Date.now()}.${ext}`
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'videos')
 
-    await writeFile(path, buffer)
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true })
+      }
 
-    return NextResponse.json({
-      success: true,
-      url: `/uploads/${folder}/${filename}`
-    })
+      await writeFile(join(uploadDir, filename), buffer)
+
+      return NextResponse.json({
+        success: true,
+        url: `/uploads/videos/${filename}`
+      })
+    } else {
+      // Images: base64 (small enough)
+      const base64 = buffer.toString('base64')
+      const dataUrl = `data:${file.type};base64,${base64}`
+
+      return NextResponse.json({
+        success: true,
+        url: dataUrl
+      })
+    }
   } catch (error: any) {
-    if (error.message === 'Not authenticated' || error.message === 'Invalid token' || error.message === 'Token expired') {
+    console.error('Upload error:', error)
+    if (['Not authenticated', 'Invalid token', 'Token expired'].includes(error.message)) {
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+    return NextResponse.json({ error: `Upload failed: ${error.message}` }, { status: 500 })
   }
 }

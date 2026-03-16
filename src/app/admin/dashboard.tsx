@@ -184,21 +184,28 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (data.success) setGalleryForm(p => ({ ...p, imageUrl: data.url }))
-    } catch (error) {}
+      else alert('Upload failed: ' + (data.error || 'Unknown error'))
+    } catch (error: any) { alert('Upload error: ' + error.message) }
     finally { setUploadingImage(false) }
   }
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    if (!galleryForm.isPremium) {
+      alert('Videos only allowed for premium content')
+      return
+    }
     setUploadingVideo(true)
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('isPremium', 'true')
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (data.success) setGalleryForm(p => ({ ...p, imageUrl: data.url }))
-    } catch (error) {}
+      else alert('Upload failed: ' + (data.error || 'Unknown error'))
+    } catch (error: any) { alert('Upload error: ' + error.message) }
     finally { setUploadingVideo(false) }
   }
 
@@ -212,7 +219,8 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
       const data = await res.json()
       if (data.success) setGalleryForm(p => ({ ...p, thumbnailUrl: data.url }))
-    } catch (error) {}
+      else alert('Upload failed: ' + (data.error || 'Unknown error'))
+    } catch (error: any) { alert('Upload error: ' + error.message) }
     finally { setUploadingThumb(false) }
   }
 
@@ -406,8 +414,10 @@ export default function AdminDashboard() {
         setGalleryItems(prev => [data.data, ...prev])
         setShowAddGallery(false)
         setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false })
+      } else {
+        alert('Add failed: ' + (data.error || 'Unknown error'))
       }
-    } catch (error) {}
+    } catch (error: any) { alert('Error: ' + error.message) }
     finally { setGalleryActionLoading(false) }
   }
 
@@ -1737,7 +1747,7 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label>Access *</Label>
-                        <Select value={galleryForm.isPremium ? 'true' : 'false'} onValueChange={val => setGalleryForm(p => ({ ...p, isPremium: val === 'true', category: '' }))}>
+                        <Select value={galleryForm.isPremium ? 'true' : 'false'} onValueChange={val => setGalleryForm(p => ({ ...p, isPremium: val === 'true', category: '', contentType: val === 'true' ? p.contentType : 'image' }))}>
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="false">🆓 Free</SelectItem>
@@ -1747,13 +1757,14 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-1">
                         <Label>Content Type *</Label>
-                        <Select value={galleryForm.contentType} onValueChange={val => setGalleryForm(p => ({ ...p, contentType: val }))}>
+                        <Select value={galleryForm.contentType} onValueChange={val => setGalleryForm(p => ({ ...p, contentType: val }))} disabled={!galleryForm.isPremium}>
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="image">🖼️ Image</SelectItem>
-                            <SelectItem value="video">🎬 Video</SelectItem>
+                            {galleryForm.isPremium && <SelectItem value="video">🎬 Video</SelectItem>}
                           </SelectContent>
                         </Select>
+                        {!galleryForm.isPremium && <p className="text-xs text-gray-500">Free content: only images allowed</p>}
                       </div>
                     </div>
                     {galleryForm.isPremium && (
@@ -1961,7 +1972,7 @@ export default function AdminDashboard() {
                         <div key={item.id} className="relative group rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
                           <div className="aspect-square relative">
                             <img
-                              src={item.imageUrl}
+                              src={item.contentType === 'video' ? (item.thumbnailUrl || `https://placehold.co/200x200/1f2937/6b7280?text=Video`) : item.imageUrl}
                               alt={item.title}
                               className="w-full h-full object-cover"
                               onError={(e: any) => { e.target.src = 'https://placehold.co/200x200/1f2937/6b7280?text=No+Image' }}

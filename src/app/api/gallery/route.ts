@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
     const where: any = { isActive: true }
     if (category && category !== 'all') where.category = category
     if (contentType) where.contentType = contentType
-    // premium param: 'true' = premium content only, anything else = free only
     const premiumParam = searchParams.get('premium')
     if (premiumParam === 'true') where.isPremium = true
     else where.isPremium = false
@@ -67,9 +66,21 @@ export async function GET(request: NextRequest) {
       likedSet = new Set(likedRows.map((r: any) => r.galleryId))
     }
 
+    const data = items.map(item => {
+      const isBase64Video = item.contentType === 'video' && item.imageUrl?.startsWith('data:')
+
+      return {
+        ...item,
+        // base64 video (old) -> stream URL, disk video -> use as-is
+        imageUrl: isBase64Video ? `/api/gallery/stream/${item.id}` : item.imageUrl,
+        thumbnailUrl: item.thumbnailUrl || null,
+        liked: likedSet.has(item.id)
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      data: items.map(item => ({ ...item, liked: likedSet.has(item.id) })),
+      data,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     })
   } catch (error) {

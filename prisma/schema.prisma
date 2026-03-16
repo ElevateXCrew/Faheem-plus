@@ -93,8 +93,8 @@ model Gallery {
   id          String   @id @default(cuid())
   title       String
   description String?
-  imageUrl    String
-  thumbnailUrl String?
+  imageUrl    String   @db.LongText
+  thumbnailUrl String? @db.LongText
   category    String?  @default("general")
   contentType String?  @default("image") // "image" or "video"
   isPremium   Boolean  @default(false)
@@ -129,8 +129,8 @@ model Content {
   id          String   @id @default(cuid())
   title       String
   description String?
-  mediaUrl    String   // URL to video or image
-  thumbnailUrl String?
+  mediaUrl    String   @db.LongText
+  thumbnailUrl String? @db.LongText
   type        String   // "video" or "image"
   categoryId  String?
   isPremium   Boolean  @default(true)

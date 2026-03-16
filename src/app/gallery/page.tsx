@@ -10,9 +10,26 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import { X, ZoomIn, Lock } from 'lucide-react'
 
+function getEmbedUrl(url: string): { type: 'youtube' | 'drive' | 'vimeo' | 'direct', embedUrl: string } {
+  if (!url) return { type: 'direct', embedUrl: url }
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]+)/)
+  if (ytMatch) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1` }
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
+  if (driveMatch) return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview` }
+  if (url.includes('drive.google.com/open?id=')) {
+    const id = url.split('id=')[1]?.split('&')[0]
+    if (id) return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${id}/preview` }
+  }
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeoMatch) return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1` }
+  return { type: 'direct', embedUrl: url }
+}
+
 interface GalleryItem {
   id: string
   src: string
+  thumbnailUrl?: string
+  contentType?: string
   category: string
   title: string
   description: string
@@ -30,7 +47,7 @@ export default function GalleryPage() {
   }, [])
 
   useEffect(() => {
-    if (user) fetchGallery()
+    if (user !== null) fetchGallery()
   }, [user])
 
   const checkAuthStatus = async () => {
@@ -53,17 +70,28 @@ export default function GalleryPage() {
 
   const fetchGallery = async () => {
     try {
-      const res = await fetch(`/api/gallery?limit=100`)
-      const data = await res.json()
-      if (data.success) {
-        setGalleryItems(data.data.map((item: any) => ({
-          id: item.id,
-          src: item.imageUrl,
-          category: item.category || 'general',
-          title: item.title,
-          description: item.description || ''
-        })))
-      }
+      // Fetch both free and premium content for gallery page
+      const [freeRes, premiumRes] = await Promise.all([
+        fetch(`/api/gallery?limit=100`),
+        user?.hasActiveSubscription ? fetch(`/api/gallery?limit=100&premium=true`) : Promise.resolve(null)
+      ])
+      const freeData = await freeRes.json()
+      const premiumData = premiumRes ? await premiumRes.json() : { success: false, data: [] }
+
+      const allItems = [
+        ...(freeData.success ? freeData.data : []),
+        ...(premiumData.success ? premiumData.data : [])
+      ]
+
+      setGalleryItems(allItems.map((item: any) => ({
+        id: item.id,
+        src: item.contentType === 'video' ? `/api/gallery/stream/${item.id}` : item.imageUrl,
+        thumbnailUrl: item.thumbnailUrl || null,
+        contentType: item.contentType || 'image',
+        category: item.category || 'general',
+        title: item.title,
+        description: item.description || ''
+      })))
     } catch (error) {}
   }
 
@@ -173,11 +201,25 @@ export default function GalleryPage() {
                   onClick={() => handleImageClick(item)}
                 >
                   <div className="relative aspect-square overflow-hidden">
-                    <img
-                      src={item.src}
-                      alt={item.title}
-                      className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-125 group-hover:rotate-2"
-                    />
+                    {item.contentType === 'video' ? (
+                      item.thumbnailUrl ? (
+                        <img
+                          src={item.thumbnailUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-125 group-hover:rotate-2"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                          <svg className="h-12 w-12 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                      )
+                    ) : (
+                      <img
+                        src={item.src}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-125 group-hover:rotate-2"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center">
                       <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.8)] transform scale-0 group-hover:scale-100 transition-all duration-500 delay-100">
                         <ZoomIn className="h-8 w-8 text-white animate-pulse" />
@@ -228,13 +270,23 @@ export default function GalleryPage() {
                 →
               </button>
 
-              {/* Image */}
+              {/* Image / Video */}
               <div className="relative aspect-video max-h-[80vh]">
-                <img
-                  src={selectedImage.src}
-                  alt={selectedImage.title}
-                  className="w-full h-full object-contain"
-                />
+                {selectedImage.contentType === 'video' ? (
+                  (() => {
+                    const { type, embedUrl } = getEmbedUrl(selectedImage.src)
+                    if (type === 'direct') {
+                      return <video src={embedUrl} poster={selectedImage.thumbnailUrl || undefined} controls autoPlay className="w-full h-full object-contain bg-black" />
+                    }
+                    return (
+                      <div className="relative w-full h-full">
+                        <iframe src={embedUrl} className="w-full h-full" allow="autoplay; fullscreen" allowFullScreen />
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <img src={selectedImage.src} alt={selectedImage.title} className="w-full h-full object-contain" />
+                )}
               </div>
 
               {/* Info */}

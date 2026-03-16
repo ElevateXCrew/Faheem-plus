@@ -8,8 +8,15 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   experimental: {
     serverActions: {
-      bodySizeLimit: '500mb',
+      bodySizeLimit: '100mb',
     },
+  },
+  images: {
+    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
+    ],
   },
 };
 
