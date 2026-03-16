@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
-
-const db = new PrismaClient()
+import db from '@/lib/db'
 
 export const config = {
   api: { responseLimit: false },
