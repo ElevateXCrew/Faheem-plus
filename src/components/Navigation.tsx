@@ -88,9 +88,7 @@ export function Navigation() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-xl">F</span>
-            </div>
+            <img src="/logo.png" alt="Faheema" className="w-10 h-10 rounded-lg object-cover shadow-lg" />
             <span className="text-2xl font-bold tracking-tight gold-text-glow text-primary">
               Faheema
             </span>

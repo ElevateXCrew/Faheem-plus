@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   keywords: ["premium content", "exclusive access", "creative resources", "subscription", "membership", "gallery", "premium images"],
   authors: [{ name: "Faheema Team" }],
   icons: {
-    icon: "/images/hero-bg.png",
-    shortcut: "/images/hero-bg.png",
-    apple: "/images/hero-bg.png",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
   openGraph: {
     title: "Faheema- Premium Content & Exclusive Experiences",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     url: "https://faheema.com",
     siteName: "Faheema",
     type: "website",
-    images: ["/images/hero-bg.png"],
+    images: ["/logo.png"],
   },
   twitter: {
     card: "summary_large_image",
