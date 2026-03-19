@@ -121,10 +121,10 @@ export default function Home() {
         <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tight">
-              Welcome to <span className="bg-gradient-to-r from-amber-200 to-pink-200 bg-clip-text text-transparent">Fucking Hub</span>
+              Welcome to my <span className="bg-gradient-to-r from-amber-200 to-pink-200 bg-clip-text text-transparent">Fans Page</span>
             </h1>
             <p className="text-xl sm:text-2xl text-white/90 max-w-2xl mx-auto font-bold tracking-tight">
-              Step closer… let every moment with me feel unforgettable. Your fantasies aren’t waiting… they’re alive here. Indulge in every secret desire with me.
+              Here's something for my content lovers
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button size="lg" className="text-lg px-8 py-6 h-auto bg-primary text-white hover:bg-primary/90 border border-white/30" asChild>

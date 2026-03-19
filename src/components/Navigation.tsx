@@ -90,7 +90,7 @@ export function Navigation() {
           <Link href="/" className="flex items-center gap-3 group">
             <img src="/logo.png" alt="Faheema" className="w-10 h-10 rounded-lg object-cover shadow-lg" />
             <span className="text-2xl font-bold tracking-tight gold-text-glow text-primary">
-              Faheema
+              Alysha
             </span>
           </Link>
 
