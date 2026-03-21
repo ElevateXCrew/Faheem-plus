@@ -132,12 +132,20 @@ export default function PremiumPage() {
   const fetchUser = async () => {
     try {
       const res = await fetch('/api/auth/me')
-      if (!res.ok) throw new Error('Not authenticated')
+      if (res.status === 401 || res.status === 404) {
+        router.push('/login')
+        return
+      }
+      if (!res.ok) throw new Error('Failed to load user')
       const data = await res.json()
-      setUser(data.user)
+      const userData = data.user
+      if (!userData.hasActiveSubscription) {
+        router.push('/pricing')
+        return
+      }
+      setUser(userData)
     } catch (err: any) {
       setError(err.message)
-      if (err.message === 'Not authenticated') router.push('/login')
     } finally {
       setLoading(false)
     }

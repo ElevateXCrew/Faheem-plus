@@ -189,8 +189,21 @@ export default function DashboardPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Validate on client side too
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      setProfileMessage('Invalid file type. Only JPG, PNG, and GIF are allowed')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileMessage('File size too large. Maximum 5MB allowed')
+      return
+    }
+
     const formData = new FormData()
     formData.append('image', file)
+    setProfileLoading(true)
+    setProfileMessage('')
 
     try {
       const response = await fetch('/api/auth/upload-profile-image', {
@@ -206,11 +219,12 @@ export default function DashboardPage() {
 
       setUser(prev => prev ? { ...prev, profileImage: data.imageUrl } : null)
       setProfileMessage('Profile image updated successfully!')
-      
-      // Dispatch event to update navigation in real-time
       window.dispatchEvent(new CustomEvent('profileUpdated'))
     } catch (err: any) {
       setProfileMessage(err.message)
+    } finally {
+      setProfileLoading(false)
+      e.target.value = '' // reset input
     }
   }
 
