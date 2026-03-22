@@ -13,7 +13,7 @@ export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,6 +27,8 @@ export function Navigation() {
     checkAuthStatus()
   }, [])
 
+  useEffect(() => { setMounted(true) }, [])
+
   const checkAuthStatus = async () => {
     try {
       const response = await fetch('/api/auth/me')
@@ -34,11 +36,7 @@ export function Navigation() {
         const data = await response.json()
         setUser(data.user)
       }
-    } catch (error) {
-      // User not logged in
-    } finally {
-      setLoading(false)
-    }
+    } catch {}
   }
 
   // Listen for profile updates
@@ -123,8 +121,8 @@ export function Navigation() {
           </div>
 
           {/* Desktop Auth/User Menu */}
-          <div className="hidden md:flex items-center space-x-2 min-w-[160px] justify-end" suppressHydrationWarning>
-            {loading ? <div className="w-[160px]" /> : !user ? (
+          <div className="hidden md:flex items-center space-x-2 min-w-[160px] justify-end">
+            {!mounted ? <div className="w-[160px]" /> : !user ? (
               <>
                 <Button variant="ghost" asChild className="gold-button-hover">
                   <Link href="/login">Login</Link>
@@ -246,8 +244,8 @@ export function Navigation() {
                     </Link>
                   </>
                 )}
-                <div className="border-t pt-4 space-y-2" suppressHydrationWarning>
-                  {loading ? null : !user ? (
+                <div className="border-t pt-4 space-y-2">
+                  {!mounted ? null : !user ? (
                     <>
                       <Button variant="ghost" className="w-full justify-start" asChild>
                         <Link href="/login">Login</Link>

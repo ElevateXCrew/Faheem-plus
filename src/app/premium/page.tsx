@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Lock, Crown, ArrowRight, Image as ImageIcon, Video, Play, Eye, X, Heart } from 'lucide-react'
+import { Lock, Crown, ArrowRight, Image as ImageIcon, Video, Play, Eye, X, Heart, ZoomIn, ZoomOut } from 'lucide-react'
 
 // Detect URL type and return embed URL
 function getEmbedUrl(url: string): { type: 'youtube' | 'drive' | 'vimeo' | 'direct', embedUrl: string } {
@@ -122,8 +122,20 @@ export default function PremiumPage() {
   const [likedItems, setLikedItems] = useState<Record<string, boolean>>({})
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({})
+  const [zoom, setZoom] = useState(1)
 
   useEffect(() => { fetchUser() }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!selectedItem) return
+      if (e.key === 'Escape') { setSelectedItem(null); setZoom(1) }
+      if (e.key === 'ArrowLeft') navigateLightbox('prev')
+      if (e.key === 'ArrowRight') navigateLightbox('next')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedItem, galleryItems])
 
   useEffect(() => {
     if (user?.hasActiveSubscription) fetchGalleryItems()
@@ -179,7 +191,24 @@ export default function PremiumPage() {
     }
   }
 
+  const navigateLightbox = (dir: 'prev' | 'next') => {
+    if (!selectedItem) return
+    const idx = galleryItems.findIndex(i => i.id === selectedItem.id)
+    const newIdx = dir === 'prev'
+      ? (idx === 0 ? galleryItems.length - 1 : idx - 1)
+      : (idx === galleryItems.length - 1 ? 0 : idx + 1)
+    setSelectedItem(galleryItems[newIdx])
+    setZoom(1)
+  }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (selectedItem?.contentType === 'video') return
+    e.preventDefault()
+    setZoom(prev => Math.min(4, Math.max(1, prev - e.deltaY * 0.002)))
+  }
+
   const trackView = async (item: GalleryItem) => {
+    setZoom(1)
     setSelectedItem(item)
     if (!item.isPremium) return
     try {
@@ -398,17 +427,65 @@ export default function PremiumPage() {
               </div>
 
               {selectedItem && (
-                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setSelectedItem(null)}>
-                  <button className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2" onClick={() => setSelectedItem(null)}>
-                    <X className="h-6 w-6" />
+                <div
+                  className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+                  onWheel={handleWheel}
+                >
+                  {/* Close */}
+                  <button
+                    onClick={() => { setSelectedItem(null); setZoom(1) }}
+                    className="absolute top-4 right-4 z-10 w-11 h-11 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-5 w-5" />
                   </button>
-                  <div className="max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+
+                  {/* Zoom controls — images only */}
+                  {selectedItem.contentType !== 'video' && (
+                    <div className="absolute top-4 left-4 z-10 flex gap-2">
+                      <button onClick={() => setZoom(p => Math.min(4, p + 0.5))} className="w-11 h-11 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center transition-colors">
+                        <ZoomIn className="h-5 w-5" />
+                      </button>
+                      <button onClick={() => setZoom(p => Math.max(1, p - 0.5))} className="w-11 h-11 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center transition-colors">
+                        <ZoomOut className="h-5 w-5" />
+                      </button>
+                      <span className="w-11 h-11 bg-white/10 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        {Math.round(zoom * 100)}%
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Prev */}
+                  <button
+                    onClick={() => navigateLightbox('prev')}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center text-xl transition-colors"
+                  >&#8592;</button>
+
+                  {/* Next */}
+                  <button
+                    onClick={() => navigateLightbox('next')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white/10 hover:bg-white/25 text-white rounded-full flex items-center justify-center text-xl transition-colors"
+                  >&#8594;</button>
+
+                  {/* Content */}
+                  <div className="w-full h-full flex items-center justify-center overflow-hidden px-16">
                     {selectedItem.contentType === 'video' ? (
-                      <VideoPlayer url={selectedItem.imageUrl} thumbnail={selectedItem.thumbnailUrl} />
+                      <div className="w-full max-w-4xl">
+                        <VideoPlayer url={selectedItem.imageUrl} thumbnail={selectedItem.thumbnailUrl} />
+                      </div>
                     ) : (
-                      <img src={selectedItem.imageUrl} alt={selectedItem.title} className="w-full max-h-[80vh] object-contain rounded-lg" />
+                      <img
+                        src={selectedItem.imageUrl}
+                        alt={selectedItem.title}
+                        className="max-w-full max-h-full object-contain transition-transform duration-150 select-none"
+                        style={{ transform: `scale(${zoom})` }}
+                        draggable={false}
+                      />
                     )}
-                    <div className="flex items-center justify-between mt-3">
+                  </div>
+
+                  {/* Info bar */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-6 py-5 pointer-events-none">
+                    <div className="flex items-center justify-between">
                       <p className="text-white font-medium">{selectedItem.title}</p>
                       <div className="flex items-center gap-4 text-white/70 text-sm">
                         <span className="flex items-center gap-1"><Eye className="h-4 w-4" />{viewCounts[selectedItem.id] ?? 0}</span>

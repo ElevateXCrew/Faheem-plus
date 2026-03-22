@@ -22,12 +22,12 @@ function SignupForm() {
   const [success, setSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [redirectTo, setRedirectTo] = useState('/login')
+  const [redirectTo, setRedirectTo] = useState('/')
 
   useEffect(() => {
     const redirect = searchParams.get('redirect')
     if (redirect) {
-      setRedirectTo(`/login?redirect=${redirect}`)
+      setRedirectTo(redirect)
     }
   }, [searchParams])
 
@@ -74,7 +74,7 @@ function SignupForm() {
 
       setSuccess(true)
 
-      // Redirect to login after 2 seconds
+      // Redirect to home after 2 seconds
       setTimeout(() => {
         router.push(redirectTo)
       }, 2000)
@@ -101,7 +101,7 @@ function SignupForm() {
                   </div>
                   <h2 className="text-2xl font-bold">Account Created!</h2>
                   <p className="text-muted-foreground">
-                    Your account has been created successfully. Redirecting to login...
+                    Your account has been created successfully. Redirecting to home...
                   </p>
                 </div>
               </CardContent>

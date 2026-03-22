@@ -7,8 +7,8 @@ async function seedPlans() {
     const plans = [
       {
         name: 'Basic',
-        price: 9.99,
-        currency: 'USD',
+        price: 100,
+        currency: '£',
         duration: 'monthly',
         features: JSON.stringify([
           'Access to basic gallery',
@@ -20,8 +20,8 @@ async function seedPlans() {
       },
       {
         name: 'Premium',
-        price: 24.99,
-        currency: 'USD',
+        price: 150,
+        currency: '£',
         duration: 'monthly',
         features: JSON.stringify([
           'Access to premium gallery',
@@ -34,8 +34,8 @@ async function seedPlans() {
       },
       {
         name: 'VIP',
-        price: 49.99,
-        currency: 'USD',
+        price: 200,
+        currency: '£',
         duration: 'monthly',
         features: JSON.stringify([
           'All Premium features',

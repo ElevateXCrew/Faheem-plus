@@ -118,7 +118,7 @@ export default function AboutPage() {
               About Me
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight">
-              Hello, I'm Faheema
+              Hello, I'm Alysha
               <span className="block mt-2 bg-gradient-to-r from-amber-200 to-pink-200 bg-clip-text text-transparent">
                 
               </span>

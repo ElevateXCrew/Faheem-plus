@@ -179,7 +179,7 @@ export default function PricingPage() {
               {[
                 {
                   name: 'Basic',
-                  price: 9.99,
+                  price: 100,
                   duration: 'monthly',
                   features: ['Access to basic gallery', 'Standard quality images', 'Email support', '1 download per day', 'Ad-free experience'],
                   icon: Sparkles,
@@ -188,7 +188,7 @@ export default function PricingPage() {
                 },
                 {
                   name: 'Premium',
-                  price: 24.99,
+                  price: 150,
                   duration: 'monthly',
                   features: ['Access to premium gallery', 'High-quality images', 'Priority support', 'Unlimited downloads', 'Exclusive content', 'Early access to new features'],
                   icon: Crown,
@@ -197,7 +197,7 @@ export default function PricingPage() {
                 },
                 {
                   name: 'VIP',
-                  price: 49.99,
+                  price: 200,
                   duration: 'monthly',
                   features: ['All Premium features', 'Ultra HD images', '24/7 dedicated support', 'Custom image requests', 'Personalized content', 'Private gallery access', 'Exclusive events'],
                   icon: Zap,
@@ -226,7 +226,7 @@ export default function PricingPage() {
                       <CardTitle className="text-2xl text-white">{plan.name}</CardTitle>
                       <CardDescription>
                         <div className="mt-4">
-                          <span className="text-4xl font-bold text-white">${plan.price}</span>
+                          <span className="text-4xl font-bold text-white">£{plan.price}</span>
                           <span className="text-muted-foreground">/{plan.duration}</span>
                         </div>
                       </CardDescription>

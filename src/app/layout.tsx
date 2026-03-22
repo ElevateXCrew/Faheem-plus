@@ -53,7 +53,7 @@ export default function RootLayout({
         <link rel="icon" href="/images/hero-bg.png" type="image/png" />
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            var devMode = sessionStorage.getItem('__devmode') === '1';
+            var devMode = (typeof sessionStorage !== 'undefined') && sessionStorage.getItem('__devmode') === '1';
 
             // Ctrl+X => toggle developer mode
             document.addEventListener('keydown', function(e) {

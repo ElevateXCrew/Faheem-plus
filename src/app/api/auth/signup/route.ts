@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import { z } from 'zod'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
 // Validation schema
 const signupSchema = z.object({
@@ -57,11 +60,28 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, type: 'user' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    const response = NextResponse.json({
       success: true,
       message: 'Account created successfully',
       user
     }, { status: 201 })
+
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60,
+      path: '/'
+    })
+
+    return response
   } catch (error: any) {
     return NextResponse.json(
       { error: 'Failed to create account. Please try again.' },

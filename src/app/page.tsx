@@ -17,7 +17,7 @@ export default function Home() {
   const plans = [
     {
       name: 'Basic',
-      price: 9.99,
+      price: 100,
       duration: 'monthly',
       icon: Sparkles,
       features: [
@@ -32,7 +32,7 @@ export default function Home() {
     },
     {
       name: 'Premium',
-      price: 24.99,
+      price: 150,
       duration: 'monthly',
       icon: Crown,
       features: [
@@ -48,7 +48,7 @@ export default function Home() {
     },
     {
       name: 'VIP',
-      price: 49.99,
+      price: 200,
       duration: 'monthly',
       icon: Zap,
       features: [
@@ -163,12 +163,11 @@ export default function Home() {
                 About Me
               </div>
               <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-center">
-                Me a very sexy girl with a lot of experience in fucking. 
+                High Class Independent Escort in Birmingham
               </h2>
               <p className="text-2xl font-bold tracking-tight text-muted-foreground leading-relaxed text-center">
-                So many beautiful memories and amazing moments are waiting for you.
-A place where elegance, beauty, and excitement meet.
-Join now and unlock the experience.
+                Me a very sexy girl with a lot of experience in fucking. 
+          So many beautiful memories and amazing moments are waiting for you.
               </p>
               <div className="grid grid-cols-2 gap-6 pt-4">
                 <div className="space-y-2">
@@ -432,7 +431,7 @@ Join now and unlock the experience.
                     <CardTitle className="text-2xl">{plan.name}</CardTitle>
                     <CardDescription>
                       <div className="mt-4">
-                        <span className="text-4xl font-bold">${plan.price}</span>
+                        <span className="text-4xl font-bold">£{plan.price}</span>
                         <span className="text-muted-foreground">/{plan.duration}</span>
                       </div>
                     </CardDescription>
@@ -467,61 +466,7 @@ Join now and unlock the experience.
           </div>
         </div>
       </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 sm:py-32 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-            <div className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">
-              Unforgettable Moments
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">
-             Unforgettable Nights, Honest Reviews
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Join thousands of satisfied members who have elevated their creative work
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="animate-in fade-in slide-in-from-bottom-8 duration-1000"
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                <CardHeader>
-                  <div className="flex gap-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <CardDescription className="text-base leading-relaxed">
-                    "{testimonial.content}"
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter>
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={testimonial.image} 
-                      alt={testimonial.name}
-                      className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
-                    />
-                    <div>
-                      <div className="font-semibold">{testimonial.name}</div>
-                      <div className="text-sm text-muted-foreground">{testimonial.role}</div>
-                    </div>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-
-      <Footer />
+       <Footer />
     </div>
   )
 }
