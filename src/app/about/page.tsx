@@ -106,7 +106,7 @@ export default function AboutPage() {
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: 'url("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=1920&q=80")',
+            backgroundImage: 'url("/images/hero-bg.png")',
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-background" />
@@ -206,9 +206,7 @@ Explore my exclusive photos, adventures, and behind-the-scenes content on my per
             </div>
             <div className="relative animate-in fade-in slide-in-from-right-8 duration-1000">
               <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl">
-                <div className="w-full h-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20 flex items-center justify-center">
-                  <Camera className="h-24 w-24 text-pink-400" />
-                </div>
+                <img src="/images/about.png" alt="About" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-6 -left-6 bg-card p-6 rounded-xl shadow-xl border">
                 <div className="flex items-center gap-3">

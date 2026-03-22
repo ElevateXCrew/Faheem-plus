@@ -193,7 +193,7 @@ Join now and unlock the experience.
             <div className="relative animate-in fade-in slide-in-from-right-8 duration-1000">
               <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl">
                 <video
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                  src="/video/intro-video.mp4"
                   className="w-full h-full object-cover"
                   autoPlay
                   loop

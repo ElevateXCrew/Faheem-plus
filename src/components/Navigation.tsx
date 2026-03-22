@@ -123,8 +123,8 @@ export function Navigation() {
           </div>
 
           {/* Desktop Auth/User Menu */}
-          <div className="hidden md:flex items-center space-x-2" suppressHydrationWarning>
-            {loading ? null : !user ? (
+          <div className="hidden md:flex items-center space-x-2 min-w-[160px] justify-end" suppressHydrationWarning>
+            {loading ? <div className="w-[160px]" /> : !user ? (
               <>
                 <Button variant="ghost" asChild className="gold-button-hover">
                   <Link href="/login">Login</Link>
