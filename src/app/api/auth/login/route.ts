@@ -77,10 +77,10 @@ export async function POST(request: NextRequest) {
       })
 
       // Set HTTP-only cookie for admin
-      response.cookies.set('admin-auth-token', token, {
+      response.cookies.set('auth-token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60, // 7 days
         path: '/'
       })
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60, // 7 days
       path: '/'
     })

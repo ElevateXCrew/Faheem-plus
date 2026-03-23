@@ -73,10 +73,8 @@ function SignupForm() {
       }
 
       setSuccess(true)
-
-      // Redirect to home after 2 seconds
       setTimeout(() => {
-        router.push(redirectTo)
+        window.location.href = redirectTo
       }, 2000)
     } catch (err: any) {
       console.error('Signup error:', err)

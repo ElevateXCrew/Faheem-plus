@@ -142,24 +142,27 @@ export default function PremiumPage() {
   }, [user, selectedCategory, contentType])
 
   const fetchUser = async () => {
+    const start = Date.now()
     try {
-      const res = await fetch('/api/auth/me')
+      const res = await fetch('/api/auth/me', { cache: 'no-store' })
       if (res.status === 401 || res.status === 404) {
-        router.push('/login')
+        window.location.href = '/login?redirect=/premium'
         return
       }
       if (!res.ok) throw new Error('Failed to load user')
       const data = await res.json()
       const userData = data.user
       if (!userData.hasActiveSubscription) {
-        router.push('/pricing')
+        window.location.href = '/pricing'
         return
       }
       setUser(userData)
     } catch (err: any) {
       setError(err.message)
     } finally {
-      setLoading(false)
+      const elapsed = Date.now() - start
+      const remaining = Math.max(0, 5000 - elapsed)
+      setTimeout(() => setLoading(false), remaining)
     }
   }
 

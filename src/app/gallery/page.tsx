@@ -36,10 +36,10 @@ export default function GalleryPage() {
         const data = await res.json()
         setUser(data.user)
       } else {
-        router.push('/login?redirect=/gallery')
+        window.location.href = '/login?redirect=/gallery'
       }
     } catch {
-      router.push('/login?redirect=/gallery')
+      window.location.href = '/login?redirect=/gallery'
     } finally {
       setLoading(false)
     }

@@ -23,7 +23,7 @@ function LoginForm() {
   const [redirectTo, setRedirectTo] = useState('/dashboard')
 
   useEffect(() => {
-    const redirect = searchParams.get('redirect')
+    const redirect = searchParams?.get('redirect')
     if (redirect) {
       setRedirectTo(redirect)
     }
@@ -54,8 +54,7 @@ function LoginForm() {
         throw new Error(data.error || 'Login failed')
       }
 
-      router.push(data.redirect || '/')
-      router.refresh()
+      window.location.href = data.redirect || redirectTo
     } catch (err: any) {
       console.error('Login error:', err)
       setError(err.message || 'An error occurred. Please try again.')
