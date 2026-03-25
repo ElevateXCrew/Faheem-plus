@@ -17,26 +17,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Faheema - Premium Content & Exclusive Experiences",
+  title: "Alysha - Premium Content & Exclusive Experiences",
   description: "Discover exclusive premium content and elevate your creative journey with our curated collection. Join our community of discerning members today.",
   keywords: ["premium content", "exclusive access", "creative resources", "subscription", "membership", "gallery", "premium images"],
-  authors: [{ name: "Faheema Team" }],
+  authors: [{ name: "Alysha Team" }],
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
     apple: "/logo.png",
   },
   openGraph: {
-    title: "Faheema- Premium Content & Exclusive Experiences",
+    title: "Alysha- Premium Content & Exclusive Experiences",
     description: "Discover exclusive premium content and elevate your creative journey with our curated collection.",
-    url: "https://faheema.com",
-    siteName: "Faheema",
+    url: "https://alysha.com",
+    siteName: "Alysha",
     type: "website",
     images: ["/logo.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Faheema - Premium Content",
+    title: "Alysha - Premium Content",
     description: "Discover exclusive premium content and elevate your creative journey.",
     images: ["/images/hero-bg.png"],
   },

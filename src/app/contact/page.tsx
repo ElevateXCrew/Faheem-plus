@@ -118,7 +118,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold mb-1">WhatsApp</h3>
                     <Button variant="link" className="p-0 h-auto" asChild>
-                      <a href="https://wa.me/923052643550" target="_blank" rel="noopener noreferrer">
+                      <a href="https://wa.me/+447511808743" target="_blank" rel="noopener noreferrer">
                         Chat on WhatsApp
                       </a>
                     </Button>
