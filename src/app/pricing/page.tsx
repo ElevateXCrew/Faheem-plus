@@ -179,7 +179,7 @@ export default function PricingPage() {
               {[
                 {
                   name: 'Basic',
-                  price: 100,
+                  Discount_price: 29.99,
                   duration: 'monthly',
                   features: ['Access to basic gallery', 'Standard quality images', 'Email support', '1 download per day', 'Ad-free experience'],
                   icon: Sparkles,
@@ -188,7 +188,7 @@ export default function PricingPage() {
                 },
                 {
                   name: 'Premium',
-                  price: 150,
+                  price: "Coming Soon",
                   duration: 'monthly',
                   features: ['Access to premium gallery', 'High-quality images', 'Priority support', 'Unlimited downloads', 'Exclusive content', 'Early access to new features'],
                   icon: Crown,
@@ -197,7 +197,7 @@ export default function PricingPage() {
                 },
                 {
                   name: 'VIP',
-                  price: 200,
+                  price: "Coming Soon",
                   duration: 'monthly',
                   features: ['All Premium features', 'Ultra HD images', '24/7 dedicated support', 'Custom image requests', 'Personalized content', 'Private gallery access', 'Exclusive events'],
                   icon: Zap,
