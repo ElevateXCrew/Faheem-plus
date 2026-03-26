@@ -24,6 +24,9 @@ interface Plan {
   duration: string
   features: string[]
   isActive: boolean
+  discountPercent?: number | null
+  discountAmount?: number | null
+  discountedPrice?: number | null
 }
 
 interface FAQ {
@@ -281,10 +284,32 @@ export default function PricingPage() {
                       <CardTitle className="text-2xl text-white">{plan.name}</CardTitle>
                       <CardDescription>
                         <div className="mt-4">
-                          <span className="text-4xl font-bold text-white">
-                            {plan.currency}{plan.price}
-                          </span>
-                          <span className="text-muted-foreground">/{plan.duration}</span>
+                          {plan.discountPercent && plan.discountPercent > 0 ? (
+                            <>
+                              <div className="flex items-center justify-center gap-2 mb-1">
+                                <span className="text-lg text-gray-400 line-through">{plan.currency}{plan.price}</span>
+                                <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{plan.discountPercent}% OFF</span>
+                              </div>
+                              <span className="text-4xl font-bold text-white">{plan.currency}{plan.discountedPrice}</span>
+                              <span className="text-muted-foreground">/{plan.duration}</span>
+                              <div className="text-xs text-green-400 mt-1">You save {plan.currency}{(plan.price - (plan.discountedPrice ?? 0)).toFixed(2)} &bull; {plan.discountPercent}% off</div>
+                            </>
+                          ) : plan.discountAmount && plan.discountAmount > 0 ? (
+                            <>
+                              <div className="flex items-center justify-center gap-2 mb-1">
+                                <span className="text-lg text-gray-400 line-through">{plan.currency}{plan.price}</span>
+                                <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">Special Price</span>
+                              </div>
+                              <span className="text-4xl font-bold text-white">{plan.currency}{plan.discountedPrice}</span>
+                              <span className="text-muted-foreground">/{plan.duration}</span>
+                              <div className="text-xs text-green-400 mt-1">You save {plan.currency}{(plan.price - (plan.discountedPrice ?? 0)).toFixed(2)} &bull; {((plan.price - (plan.discountedPrice ?? 0)) / plan.price * 100).toFixed(0)}% off</div>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-4xl font-bold text-white">{plan.currency}{plan.price}</span>
+                              <span className="text-muted-foreground">/{plan.duration}</span>
+                            </>
+                          )}
                         </div>
                       </CardDescription>
                     </CardHeader>

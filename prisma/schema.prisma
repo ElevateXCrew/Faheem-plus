@@ -55,6 +55,8 @@ model Plan {
   duration    String   // e.g., "monthly", "yearly"
   features    String   // JSON string of features
   isActive    Boolean  @default(true)
+  discountPercent Float? // Discount percentage (e.g. 20 = 20% off)
+  discountAmount  Float? // Fixed discount amount (e.g. 5 = $5 off)
   stripePriceId String? @unique // Stripe Price ID
   revenue     Float    @default(0) // Total revenue from this plan
   createdAt   DateTime @default(now())

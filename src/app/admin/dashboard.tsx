@@ -174,6 +174,12 @@ export default function AdminDashboard() {
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingThumb, setUploadingThumb] = useState(false)
 
+  // Multi-upload state
+  const [multiFiles, setMultiFiles] = useState<{ file: File; preview: string; title: string }[]>([])
+  const [multiSettings, setMultiSettings] = useState({ isPremium: false, category: '', contentType: 'image', isActive: true })
+  const [multiUploading, setMultiUploading] = useState(false)
+  const [multiProgress, setMultiProgress] = useState(0)
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -224,6 +230,55 @@ export default function AdminDashboard() {
     finally { setUploadingThumb(false) }
   }
 
+  const handleMultiFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const items = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      title: file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+    }))
+    setMultiFiles(prev => [...prev, ...items])
+    e.target.value = ''
+  }
+
+  const handleMultiUploadAll = async () => {
+    if (!multiFiles.length) return
+    setMultiUploading(true)
+    setMultiProgress(0)
+    let done = 0
+    for (const item of multiFiles) {
+      try {
+        const formData = new FormData()
+        formData.append('file', item.file)
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: formData })
+        const data = await res.json()
+        if (data.success) {
+          await fetch('/api/admin/gallery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: item.title || item.file.name,
+              imageUrl: data.url,
+              category: multiSettings.category,
+              isPremium: multiSettings.isPremium,
+              contentType: multiSettings.contentType,
+              isActive: multiSettings.isActive,
+              description: ''
+            })
+          })
+        }
+      } catch {}
+      done++
+      setMultiProgress(Math.round((done / multiFiles.length) * 100))
+    }
+    setMultiFiles([])
+    setMultiUploading(false)
+    setMultiProgress(0)
+    setShowAddGallery(false)
+    fetchGallery()
+  }
+
   // Subscriptions state
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [subsLoading, setSubsLoading] = useState(false)
@@ -241,6 +296,16 @@ export default function AdminDashboard() {
   const [createSubForm, setCreateSubForm] = useState({ userId: '', planId: '', startDate: '', endDate: '' })
   const [createSubLoading, setCreateSubLoading] = useState(false)
 
+  // Plans state
+  const [adminPlans, setAdminPlans] = useState<any[]>([])
+  const [plansLoading, setPlansLoading] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<any | null>(null)
+  const [showAddPlan, setShowAddPlan] = useState(false)
+  const [planActionLoading, setPlanActionLoading] = useState(false)
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null)
+  const defaultPlanForm = { name: '', price: '', currency: 'USD', duration: 'monthly', features: '', discountPercent: '', discountAmount: '', isActive: true }
+  const [planForm, setPlanForm] = useState(defaultPlanForm)
+
   // Fetch admin auth
   useEffect(() => {
     fetchAdmin()
@@ -256,6 +321,7 @@ export default function AdminDashboard() {
       if (activeSection === 'users') fetchUsers(1, '')
       if (activeSection === 'subscriptions') { fetchSubscriptions(1, 'all'); fetchPlansAndUsers() }
       if (activeSection === 'gallery') fetchGallery()
+      if (activeSection === 'plans') fetchAdminPlans()
     }
   }, [activeSection, admin, timeRange, metricType])
 
@@ -544,6 +610,64 @@ export default function AdminDashboard() {
     finally { setCreateSubLoading(false) }
   }
 
+  const fetchAdminPlans = async () => {
+    setPlansLoading(true)
+    try {
+      const res = await fetch('/api/admin/plans')
+      const data = await res.json()
+      if (data.success) setAdminPlans(data.plans)
+    } catch {}
+    finally { setPlansLoading(false) }
+  }
+
+  const handleSavePlan = async () => {
+    setPlanActionLoading(true)
+    try {
+      const body = {
+        ...planForm,
+        price: parseFloat(planForm.price),
+        discountPercent: planForm.discountPercent === '' ? null : parseFloat(planForm.discountPercent),
+        discountAmount: planForm.discountAmount === '' ? null : parseFloat(planForm.discountAmount),
+        features: planForm.features.split('\n').map((f: string) => f.trim()).filter(Boolean),
+      }
+      const url = editingPlan ? `/api/admin/plans?id=${editingPlan.id}` : '/api/admin/plans'
+      const method = editingPlan ? 'PATCH' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const data = await res.json()
+      if (data.success) {
+        if (editingPlan) {
+          setAdminPlans(prev => prev.map(p => p.id === editingPlan.id ? data.plan : p))
+        } else {
+          setAdminPlans(prev => [...prev, data.plan])
+        }
+        setEditingPlan(null)
+        setShowAddPlan(false)
+        setPlanForm(defaultPlanForm)
+      } else {
+        alert(data.error || 'Failed')
+      }
+    } catch (e: any) { alert(e.message) }
+    finally { setPlanActionLoading(false) }
+  }
+
+  const handleDeletePlan = async () => {
+    if (!deletingPlanId) return
+    setPlanActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/plans?id=${deletingPlanId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        if (data.deactivated) {
+          setAdminPlans(prev => prev.map(p => p.id === deletingPlanId ? { ...p, isActive: false } : p))
+        } else {
+          setAdminPlans(prev => prev.filter(p => p.id !== deletingPlanId))
+        }
+        setDeletingPlanId(null)
+      }
+    } catch {}
+    finally { setPlanActionLoading(false) }
+  }
+
   const fetchPlansAndUsers = async () => {
     try {
       const [plansRes, usersRes] = await Promise.all([
@@ -618,6 +742,7 @@ export default function AdminDashboard() {
                 { id: 'gallery', label: 'Gallery', icon: Grid3x3 },
                 { id: 'users', label: 'Users', icon: Users },
                 { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+                { id: 'plans', label: 'Plan Controls', icon: Settings },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -1739,15 +1864,16 @@ export default function AdminDashboard() {
           {activeSection === 'gallery' && (
             <div className="space-y-6">
               {/* Add Gallery Dialog */}
-              <Dialog open={showAddGallery} onOpenChange={setShowAddGallery}>
-                <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
+              <Dialog open={showAddGallery} onOpenChange={(open) => { setShowAddGallery(open); if (!open) { setMultiFiles([]); setMultiProgress(0) } }}>
+                <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>Add Content</DialogTitle></DialogHeader>
-                  <div className="space-y-3 py-2">
-                    {/* Step 1: Access & Content Type FIRST */}
+                  <div className="space-y-4 py-2">
+
+                    {/* Global Settings */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label>Access *</Label>
-                        <Select value={galleryForm.isPremium ? 'true' : 'false'} onValueChange={val => setGalleryForm(p => ({ ...p, isPremium: val === 'true', category: '', contentType: val === 'true' ? p.contentType : 'image' }))}>
+                        <Select value={multiSettings.isPremium ? 'true' : 'false'} onValueChange={val => setMultiSettings(p => ({ ...p, isPremium: val === 'true', category: '', contentType: val === 'true' ? p.contentType : 'image' }))}>
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="false">🆓 Free</SelectItem>
@@ -1757,82 +1883,92 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-1">
                         <Label>Content Type *</Label>
-                        <Select value={galleryForm.contentType} onValueChange={val => setGalleryForm(p => ({ ...p, contentType: val }))} disabled={!galleryForm.isPremium}>
+                        <Select value={multiSettings.contentType} onValueChange={val => setMultiSettings(p => ({ ...p, contentType: val }))} disabled={!multiSettings.isPremium}>
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="image">🖼️ Image</SelectItem>
-                            {galleryForm.isPremium && <SelectItem value="video">🎬 Video</SelectItem>}
+                            {multiSettings.isPremium && <SelectItem value="video">🎬 Video</SelectItem>}
                           </SelectContent>
                         </Select>
-                        {!galleryForm.isPremium && <p className="text-xs text-gray-500">Free content: only images allowed</p>}
                       </div>
                     </div>
-                    {galleryForm.isPremium && (
+
+                    {multiSettings.isPremium && (
                       <div className="space-y-1">
                         <Label>Category</Label>
-                        <Select value={galleryForm.category} onValueChange={val => setGalleryForm(p => ({ ...p, category: val }))}>
-                          <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue placeholder="Select premium category" /></SelectTrigger>
+                        <Select value={multiSettings.category} onValueChange={val => setMultiSettings(p => ({ ...p, category: val }))}>
+                          <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue placeholder="Select category" /></SelectTrigger>
                           <SelectContent className="max-h-60">
-                            {premiumCategories.map(cat => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                            ))}
+                            {premiumCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
                     )}
+
+                    {/* Multi File Select */}
                     <div className="space-y-1">
-                      <Label>Title *</Label>
-                      <Input value={galleryForm.title} onChange={e => setGalleryForm(p => ({ ...p, title: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder="Content title" />
+                      <Label>Select Files (multiple allowed)</Label>
+                      <label className="flex items-center justify-center gap-2 w-full h-24 border-2 border-dashed border-gray-600 rounded-lg cursor-pointer hover:border-primary transition-colors">
+                        <input
+                          type="file"
+                          multiple
+                          accept={multiSettings.contentType === 'video' ? 'video/*' : 'image/*'}
+                          className="hidden"
+                          onChange={handleMultiFileSelect}
+                        />
+                        <Upload className="h-6 w-6 text-gray-400" />
+                        <span className="text-gray-400 text-sm">Click to select files (multiple)</span>
+                      </label>
                     </div>
-                    <div className="space-y-1">
-                      <Label>{galleryForm.contentType === 'video' ? 'Video Upload / URL' : 'Image Upload / URL'}</Label>
-                      <div className="flex gap-2">
-                        <Input value={galleryForm.imageUrl} onChange={e => setGalleryForm(p => ({ ...p, imageUrl: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder={galleryForm.contentType === 'video' ? 'https://... or upload from device' : '/images/... or https://...'} />
-                        <label className="cursor-pointer">
-                          <input type="file" accept={galleryForm.contentType === 'video' ? 'video/*' : 'image/*'} className="hidden" onChange={galleryForm.contentType === 'video' ? handleVideoUpload : handleImageUpload} />
-                          <div className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm text-white whitespace-nowrap">
-                            {(galleryForm.contentType === 'video' ? uploadingVideo : uploadingImage) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            Upload
-                          </div>
-                        </label>
-                      </div>
-                      {galleryForm.imageUrl && galleryForm.contentType !== 'video' && (
-                        <img src={galleryForm.imageUrl} className="mt-2 h-20 w-20 object-cover rounded border border-gray-700" onError={(e:any) => e.target.style.display='none'} />
-                      )}
-                    </div>
-                    {galleryForm.contentType === 'video' && (
-                      <div className="space-y-1">
-                        <Label>Thumbnail</Label>
-                        <div className="flex gap-2">
-                          <Input value={galleryForm.thumbnailUrl} onChange={e => setGalleryForm(p => ({ ...p, thumbnailUrl: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder="https://... or upload" />
-                          <label className="cursor-pointer">
-                            <input type="file" accept="image/*" className="hidden" onChange={handleThumbUpload} />
-                            <div className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-sm text-white whitespace-nowrap">
-                              {uploadingThumb ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                              Upload
-                            </div>
-                          </label>
+
+                    {/* File List with title editing */}
+                    {multiFiles.length > 0 && (
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        <div className="flex items-center justify-between">
+                          <Label>{multiFiles.length} file(s) selected</Label>
+                          <button onClick={() => setMultiFiles([])} className="text-xs text-red-400 hover:text-red-300">Clear all</button>
                         </div>
-                        {galleryForm.thumbnailUrl && (
-                          <img src={galleryForm.thumbnailUrl} className="mt-2 h-20 w-20 object-cover rounded border border-gray-700" onError={(e:any) => e.target.style.display='none'} />
-                        )}
+                        {multiFiles.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-3 bg-gray-800 rounded-lg p-2">
+                            {multiSettings.contentType !== 'video' ? (
+                              <img src={item.preview} className="w-12 h-12 object-cover rounded flex-shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                                <span className="text-xl">🎬</span>
+                              </div>
+                            )}
+                            <Input
+                              value={item.title}
+                              onChange={e => setMultiFiles(prev => prev.map((f, i) => i === idx ? { ...f, title: e.target.value } : f))}
+                              className="bg-gray-700 border-gray-600 text-sm h-8"
+                              placeholder="Title"
+                            />
+                            <button onClick={() => setMultiFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300 flex-shrink-0">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div className="space-y-1">
-                      <Label>Status</Label>
-                      <Select value={galleryForm.isActive ? 'true' : 'false'} onValueChange={val => setGalleryForm(p => ({ ...p, isActive: val === 'true' }))}>
-                        <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">Active</SelectItem>
-                          <SelectItem value="false">Inactive</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+
+                    {/* Progress bar */}
+                    {multiUploading && (
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs text-gray-400">
+                          <span>Uploading...</span>
+                          <span>{multiProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2">
+                          <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: `${multiProgress}%` }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
+
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowAddGallery(false)} className="border-gray-700 text-white">Cancel</Button>
-                    <Button onClick={handleAddGallery} disabled={galleryActionLoading || uploadingImage || uploadingVideo}>
-                      {galleryActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add Content'}
+                    <Button variant="outline" onClick={() => { setShowAddGallery(false); setMultiFiles([]) }} className="border-gray-700 text-white">Cancel</Button>
+                    <Button onClick={handleMultiUploadAll} disabled={multiUploading || multiFiles.length === 0}>
+                      {multiUploading ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{multiProgress}%</> : `Add ${multiFiles.length || ''} Content`}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -2406,6 +2542,256 @@ export default function AdminDashboard() {
                     </>
                   ) : (
                     <p className="text-center py-12 text-muted-foreground">No subscriptions found</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Plans Section */}
+          {activeSection === 'plans' && (
+            <div className="space-y-6">
+              {/* Add/Edit Plan Dialog */}
+              <Dialog open={showAddPlan || !!editingPlan} onOpenChange={open => { if (!open) { setShowAddPlan(false); setEditingPlan(null); setPlanForm(defaultPlanForm) } }}>
+                <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>{editingPlan ? 'Edit Plan' : 'Add New Plan'}</DialogTitle>
+                    <DialogDescription className="text-gray-400">Plan details. Features ek line mein ek feature likhein.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3 py-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Plan Name *</Label>
+                        <Input value={planForm.name} onChange={e => setPlanForm(p => ({ ...p, name: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder="e.g. Basic" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Currency</Label>
+                        <Input value={planForm.currency} onChange={e => setPlanForm(p => ({ ...p, currency: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder="USD" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label>Original Price *</Label>
+                        <Input type="number" step="0.01" value={planForm.price} onChange={e => setPlanForm(p => ({ ...p, price: e.target.value }))} className="bg-gray-800 border-gray-700" placeholder="9.99" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Discount % (optional)</Label>
+                        <Input type="number" step="1" min="0" max="100" value={planForm.discountPercent} onChange={e => setPlanForm(p => ({ ...p, discountPercent: e.target.value, discountAmount: '' }))} className="bg-gray-800 border-gray-700" placeholder="e.g. 20" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Custom Final Price (optional)</Label>
+                      <Input type="number" step="0.01" min="0" value={planForm.discountAmount} onChange={e => setPlanForm(p => ({ ...p, discountAmount: e.target.value, discountPercent: '' }))} className="bg-gray-800 border-gray-700" placeholder="e.g. 29.99 (final price to show)" />
+                      <p className="text-xs text-gray-500">Yahan wo price likho jo dikhani hai — e.g. 29.99</p>
+                    </div>
+                    {planForm.price && (
+                      <div className="bg-gray-800 rounded-lg p-3 text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Original Price:</span>
+                          <span className="text-white font-bold">{planForm.currency || 'USD'}{parseFloat(planForm.price || '0').toFixed(2)}</span>
+                        </div>
+                        {planForm.discountPercent && parseFloat(planForm.discountPercent) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">After {planForm.discountPercent}% off:</span>
+                            <span className="text-green-400 font-bold">
+                              {planForm.currency || 'USD'}{(parseFloat(planForm.price) * (1 - parseFloat(planForm.discountPercent) / 100)).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {planForm.discountAmount && parseFloat(planForm.discountAmount) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Final price (custom):</span>
+                            <span className="text-green-400 font-bold">
+                              {planForm.currency || 'USD'}{parseFloat(planForm.discountAmount).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        {!planForm.discountPercent && !planForm.discountAmount && (
+                          <div className="text-xs text-gray-500">No discount applied</div>
+                        )}
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label>Duration</Label>
+                      <Select value={planForm.duration} onValueChange={val => setPlanForm(p => ({ ...p, duration: val }))}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="lifetime">Lifetime</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Features (ek line = ek feature)</Label>
+                      <textarea
+                        value={planForm.features}
+                        onChange={e => setPlanForm(p => ({ ...p, features: e.target.value }))}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-sm text-white resize-none h-28"
+                        placeholder={"Access to gallery\nHigh quality images\nEmail support"}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Status</Label>
+                      <Select value={planForm.isActive ? 'true' : 'false'} onValueChange={val => setPlanForm(p => ({ ...p, isActive: val === 'true' }))}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">Active</SelectItem>
+                          <SelectItem value="false">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => { setShowAddPlan(false); setEditingPlan(null); setPlanForm(defaultPlanForm) }} className="border-gray-700 text-white">Cancel</Button>
+                    <Button onClick={handleSavePlan} disabled={planActionLoading || !planForm.name || !planForm.price}>
+                      {planActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : editingPlan ? 'Save Changes' : 'Add Plan'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Delete Plan Dialog */}
+              <Dialog open={!!deletingPlanId} onOpenChange={open => !open && setDeletingPlanId(null)}>
+                <DialogContent className="bg-gray-900 border-gray-700 text-white">
+                  <DialogHeader>
+                    <DialogTitle>Delete Plan</DialogTitle>
+                    <DialogDescription className="text-gray-400">Are you sure? If this plan has active subscriptions, it will be deactivated instead of deleted.</DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setDeletingPlanId(null)} className="border-gray-700 text-white">Cancel</Button>
+                    <Button variant="destructive" onClick={handleDeletePlan} disabled={planActionLoading}>
+                      {planActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Plan Controls <span className="text-sm font-normal text-gray-400 ml-2">({adminPlans.length} plans)</span></CardTitle>
+                    <Button onClick={() => { setPlanForm(defaultPlanForm); setShowAddPlan(true) }} className="bg-primary hover:bg-primary/90">
+                      <Plus className="h-4 w-4 mr-2" /> Add Plan
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {plansLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : adminPlans.length > 0 ? (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {adminPlans.map((plan: any) => {
+                        const discountedPrice = plan.discountPercent
+                          ? (plan.price * (1 - plan.discountPercent / 100)).toFixed(2)
+                          : plan.discountAmount
+                          ? parseFloat(plan.discountAmount).toFixed(2)
+                          : null
+                        const finalPrice = discountedPrice ?? plan.price
+                        return (
+                          <div key={plan.id} className="bg-gray-800 rounded-xl p-5 border border-gray-700 space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className="font-bold text-lg text-white">{plan.name}</h3>
+                                <Badge variant={plan.isActive == true || plan.isActive == 1 ? 'default' : 'secondary'} className="text-xs mt-1">
+                                  {plan.isActive == true || plan.isActive == 1 ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="outline" className="border-gray-600 text-blue-400 hover:bg-blue-400/10 h-8 w-8 p-0"
+                                  onClick={() => {
+                                    setEditingPlan(plan)
+                                    setPlanForm({
+                                      name: plan.name,
+                                      price: String(plan.price),
+                                      currency: plan.currency,
+                                      duration: plan.duration,
+                                      features: Array.isArray(plan.features) ? plan.features.join('\n') : '',
+                                      discountPercent: plan.discountPercent != null ? String(plan.discountPercent) : '',
+                                      discountAmount: plan.discountAmount != null ? String(plan.discountAmount) : '',
+                                      isActive: plan.isActive,
+                                    })
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" className="border-gray-600 text-red-400 hover:bg-red-400/10 h-8 w-8 p-0"
+                                  onClick={() => setDeletingPlanId(plan.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Price Display */}
+                            <div className="space-y-1">
+                              {discountedPrice ? (
+                                <>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-gray-400 line-through text-sm">{plan.currency}{plan.price}</span>
+                                    {plan.discountPercent ? (
+                                      <Badge className="bg-green-600/20 text-green-400 border border-green-600/30 text-xs">{plan.discountPercent}% OFF</Badge>
+                                    ) : (
+                                      <Badge className="bg-blue-600/20 text-blue-400 border border-blue-600/30 text-xs">Special Price</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-2xl font-bold text-green-400">
+                                    {plan.currency}{discountedPrice}
+                                    <span className="text-sm font-normal text-gray-400">/{plan.duration}</span>
+                                  </div>
+                                  <div className="text-xs text-green-400">You save {plan.currency}{(plan.price - parseFloat(discountedPrice)).toFixed(2)} &bull; {plan.discountPercent ? `${plan.discountPercent}%` : `${((plan.price - parseFloat(discountedPrice)) / plan.price * 100).toFixed(0)}%`} off</div>
+                                  <div className="text-xs text-gray-500">Final price after discount</div>
+                                </>
+                              ) : (
+                                <div className="text-2xl font-bold text-white">{plan.currency}{plan.price}<span className="text-sm font-normal text-gray-400">/{plan.duration}</span></div>
+                              )}
+                            </div>
+
+                            {/* Features */}
+                            <div className="space-y-1">
+                              {(Array.isArray(plan.features) ? plan.features : []).map((f: string, i: number) => (
+                                <div key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                                  <CheckCircle className="h-3 w-3 text-green-400 flex-shrink-0 mt-0.5" />
+                                  <span>{f}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Quick Price Adjust */}
+                            <div className="pt-2 border-t border-gray-700">
+                              <p className="text-xs text-gray-500 mb-2">Quick Price Adjust</p>
+                              <div className="flex gap-1">
+                                {[-10, -5, +5, +10].map(delta => (
+                                  <Button key={delta} size="sm"
+                                    variant="outline"
+                                    className={`flex-1 h-7 text-xs border-gray-600 ${
+                                      delta < 0 ? 'text-red-400 hover:bg-red-400/10' : 'text-green-400 hover:bg-green-400/10'
+                                    }`}
+                                    onClick={async () => {
+                                      const newPrice = Math.max(0, parseFloat((plan.price + delta).toFixed(2)))
+                                      const res = await fetch(`/api/admin/plans?id=${plan.id}`, {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ price: newPrice })
+                                      })
+                                      const data = await res.json()
+                                      if (data.success) setAdminPlans(prev => prev.map(p => p.id === plan.id ? data.plan : p))
+                                    }}
+                                  >
+                                    {delta > 0 ? `+${delta}` : delta}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center py-12 text-muted-foreground">No plans found. Add your first plan.</p>
                   )}
                 </CardContent>
               </Card>
