@@ -65,7 +65,7 @@ function VideoPlayer({ url, thumbnail }: { url: string, thumbnail?: string | nul
 
 interface UserData {
   hasActiveSubscription: boolean
-  currentSubscription: { status: string; plan: { name: string } } | null
+  currentSubscription: { status: string; plan: { id: string; name: string } } | null
 }
 
 interface GalleryItem {
@@ -123,6 +123,7 @@ export default function PremiumPage() {
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({})
   const [viewCounts, setViewCounts] = useState<Record<string, number>>({})
   const [zoom, setZoom] = useState(1)
+  const [userPlanId, setUserPlanId] = useState<string | null>(null)
 
   useEffect(() => { fetchUser() }, [])
 
@@ -139,7 +140,7 @@ export default function PremiumPage() {
 
   useEffect(() => {
     if (user?.hasActiveSubscription) fetchGalleryItems()
-  }, [user, selectedCategory, contentType])
+  }, [user, selectedCategory, contentType, userPlanId])
 
   const fetchUser = async () => {
     const start = Date.now()
@@ -157,6 +158,7 @@ export default function PremiumPage() {
         return
       }
       setUser(userData)
+      setUserPlanId(userData.currentSubscription?.plan?.id || null)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -172,6 +174,7 @@ export default function PremiumPage() {
       const params = new URLSearchParams({ limit: '100', premium: 'true' })
       if (selectedCategory !== 'all') params.set('category', selectedCategory)
       params.set('contentType', contentType === 'videos' ? 'video' : 'image')
+      if (userPlanId) params.set('planId', userPlanId)
       const res = await fetch(`/api/gallery?${params}`)
       if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()

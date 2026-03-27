@@ -31,29 +31,53 @@ export async function GET(request: NextRequest) {
     if (premiumParam === 'true') where.isPremium = true
     else where.isPremium = false
 
-    const [items, total] = await Promise.all([
-      db.gallery.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { displayOrder: 'asc' },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          imageUrl: true,
-          thumbnailUrl: true,
-          category: true,
-          contentType: true,
-          isPremium: true,
-          displayOrder: true,
-          views: true,
-          likes: true,
-          createdAt: true
-        }
-      }),
-      db.gallery.count({ where })
-    ])
+    const allItems = await db.gallery.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { displayOrder: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        imageUrl: true,
+        thumbnailUrl: true,
+        category: true,
+        contentType: true,
+        isPremium: true,
+        allowedPlans: true,
+        displayOrder: true,
+        views: true,
+        likes: true,
+        createdAt: true
+      }
+    })
+
+    // Hierarchy-based plan filtering
+    // Plans sorted by price (asc) = tier order: Basic < Premium < VIP
+    // A user can see content assigned to their plan AND all lower-tier plans
+    const planId = searchParams.get('planId')
+    let accessiblePlanIds: string[] = []
+    if (planId) {
+      const allPlans = await db.plan.findMany({ select: { id: true, price: true }, orderBy: { price: 'asc' } })
+      const userPlanIndex = allPlans.findIndex(p => p.id === planId)
+      // user can access their tier and everything below
+      accessiblePlanIds = userPlanIndex >= 0 ? allPlans.slice(0, userPlanIndex + 1).map(p => p.id) : [planId]
+    }
+
+    const items = allItems.filter(item => {
+      if (!item.allowedPlans) return true // no restriction = everyone sees it
+      try {
+        const allowed: string[] = JSON.parse(item.allowedPlans)
+        if (allowed.length === 0) return true
+        if (!planId) return false // premium content, no plan = deny
+        // allow if any of user's accessible plans is in the allowed list
+        return accessiblePlanIds.some(id => allowed.includes(id))
+      } catch {
+        return true
+      }
+    })
+    const total = items.length
 
     const userId = getUserId(request)
     let likedSet = new Set<string>()
