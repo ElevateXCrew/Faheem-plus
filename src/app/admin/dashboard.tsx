@@ -870,6 +870,41 @@ export default function AdminDashboard() {
                     </Card>
                   </div>
 
+                  {/* Device Breakdown */}
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                    {(() => {
+                      const ds = analytics.summary.deviceStats || { desktop: { count: 0, share: 0 }, mobile: { count: 0, share: 0 }, tablet: { count: 0, share: 0 } }
+                      return [
+                        { label: 'Desktop Visits', sub: 'PC / Laptop users', key: 'desktop', color: 'blue', icon: '🖥️', barColor: 'bg-blue-500' },
+                        { label: 'Mobile Visits', sub: 'Smartphone users', key: 'mobile', color: 'orange', icon: '📱', barColor: 'bg-orange-500' },
+                        { label: 'Tablet Visits', sub: 'Tablet users', key: 'tablet', color: 'purple', icon: '💻', barColor: 'bg-purple-500' },
+                      ].map(({ label, sub, key, color, icon, barColor }) => {
+                        const d = ds[key as keyof typeof ds]
+                        return (
+                          <Card key={key} className={`border border-${color}-500/40 bg-${color}-500/5`}>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                              <CardTitle className="text-sm font-medium text-gray-400">{icon} {label}</CardTitle>
+                              <BarChart3 className={`h-5 w-5 text-${color}-400`} />
+                            </CardHeader>
+                            <CardContent>
+                              <div className={`text-3xl font-bold text-${color}-400`}>{(d.count || 0).toLocaleString()}</div>
+                              <p className="text-xs text-gray-500 mt-1">{sub}</p>
+                              <div className="mt-3">
+                                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                  <span>Share</span>
+                                  <span>{d.share || 0}%</span>
+                                </div>
+                                <div className="w-full bg-gray-800 rounded-full h-1.5">
+                                  <div className={`${barColor} h-1.5 rounded-full transition-all duration-500`} style={{ width: `${d.share || 0}%` }} />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })
+                    })()}
+                  </div>
+
                   {/* Row 2 - Revenue & Content */}
                   <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                     <Card>
