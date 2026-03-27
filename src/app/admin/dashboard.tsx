@@ -169,14 +169,14 @@ export default function AdminDashboard() {
     { id: 'special', name: 'Special Requests' },
   ]
 
-  const [galleryForm, setGalleryForm] = useState({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false })
+  const [galleryForm, setGalleryForm] = useState({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] as string[] })
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingThumb, setUploadingThumb] = useState(false)
 
   // Multi-upload state
   const [multiFiles, setMultiFiles] = useState<{ file: File; preview: string; title: string }[]>([])
-  const [multiSettings, setMultiSettings] = useState({ isPremium: false, category: '', contentType: 'image', isActive: true })
+  const [multiSettings, setMultiSettings] = useState({ isPremium: false, category: '', contentType: 'image', isActive: true, allowedPlans: [] as string[] })
   const [multiUploading, setMultiUploading] = useState(false)
   const [multiProgress, setMultiProgress] = useState(0)
 
@@ -264,6 +264,7 @@ export default function AdminDashboard() {
               isPremium: multiSettings.isPremium,
               contentType: multiSettings.contentType,
               isActive: multiSettings.isActive,
+              allowedPlans: multiSettings.allowedPlans.length > 0 ? JSON.stringify(multiSettings.allowedPlans) : null,
               description: ''
             })
           })
@@ -320,7 +321,7 @@ export default function AdminDashboard() {
       if (activeSection === 'revenue') fetchRevenue()
       if (activeSection === 'users') fetchUsers(1, '')
       if (activeSection === 'subscriptions') { fetchSubscriptions(1, 'all'); fetchPlansAndUsers() }
-      if (activeSection === 'gallery') fetchGallery()
+      if (activeSection === 'gallery') { fetchGallery(); fetchPlansAndUsers() }
       if (activeSection === 'plans') fetchAdminPlans()
     }
   }, [activeSection, admin, timeRange, metricType])
@@ -473,13 +474,13 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(galleryForm)
+        body: JSON.stringify({ ...galleryForm, allowedPlans: galleryForm.allowedPlans.length > 0 ? JSON.stringify(galleryForm.allowedPlans) : null })
       })
       const data = await res.json()
       if (data.success) {
         setGalleryItems(prev => [data.data, ...prev])
         setShowAddGallery(false)
-        setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false })
+        setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] })
       } else {
         alert('Add failed: ' + (data.error || 'Unknown error'))
       }
@@ -494,7 +495,7 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/gallery?id=${editingGallery.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(galleryForm)
+        body: JSON.stringify({ ...galleryForm, allowedPlans: galleryForm.allowedPlans.length > 0 ? JSON.stringify(galleryForm.allowedPlans) : null })
       })
       const data = await res.json()
       if (data.success) {
@@ -1899,7 +1900,7 @@ export default function AdminDashboard() {
           {activeSection === 'gallery' && (
             <div className="space-y-6">
               {/* Add Gallery Dialog */}
-              <Dialog open={showAddGallery} onOpenChange={(open) => { setShowAddGallery(open); if (!open) { setMultiFiles([]); setMultiProgress(0) } }}>
+              <Dialog open={showAddGallery} onOpenChange={(open) => { setShowAddGallery(open); if (!open) { setMultiFiles([]); setMultiProgress(0); setMultiSettings({ isPremium: false, category: '', contentType: 'image', isActive: true, allowedPlans: [] }) } }}>
                 <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>Add Content</DialogTitle></DialogHeader>
                   <div className="space-y-4 py-2">
@@ -1908,7 +1909,12 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <Label>Access *</Label>
-                        <Select value={multiSettings.isPremium ? 'true' : 'false'} onValueChange={val => setMultiSettings(p => ({ ...p, isPremium: val === 'true', category: '', contentType: val === 'true' ? p.contentType : 'image' }))}>
+                        <Select
+                          value={multiSettings.isPremium ? 'true' : 'false'}
+                          onValueChange={val => {
+                            setMultiSettings(p => ({ ...p, isPremium: val === 'true', category: '', contentType: val === 'true' ? p.contentType : 'image', allowedPlans: [] }))
+                          }}
+                        >
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="false">🆓 Free</SelectItem>
@@ -1937,6 +1943,42 @@ export default function AdminDashboard() {
                             {premiumCategories.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+
+                    {/* Plan Access Selector - sirf premium content ke liye */}
+                    {multiSettings.isPremium && (
+                      <div className="space-y-1">
+                        <Label>Kin Plans Ko Dikhao <span className="text-gray-500 text-xs">(koi select na karo = sab plans)</span></Label>
+                        <div className="flex flex-wrap gap-2">
+                          {plans.length === 0 ? (
+                            <p className="text-xs text-gray-500">Plans load ho rahe hain...</p>
+                          ) : plans.map((plan: any) => {
+                            const selected = multiSettings.allowedPlans.includes(plan.id)
+                            return (
+                              <button
+                                key={plan.id}
+                                type="button"
+                                onClick={() => setMultiSettings(p => ({
+                                  ...p,
+                                  allowedPlans: selected
+                                    ? p.allowedPlans.filter(id => id !== plan.id)
+                                    : [...p.allowedPlans, plan.id]
+                                }))}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                  selected
+                                    ? 'bg-primary border-primary text-white'
+                                    : 'bg-gray-800 border-gray-600 text-gray-300 hover:border-gray-400'
+                                }`}
+                              >
+                                {plan.name} (${plan.price})
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {multiSettings.allowedPlans.length === 0 && (
+                          <p className="text-xs text-gray-500">✅ Sab premium plans wale dekh sakte hain</p>
+                        )}
                       </div>
                     )}
 
@@ -2065,7 +2107,12 @@ export default function AdminDashboard() {
                       </div>
                       <div className="space-y-1">
                         <Label>Access</Label>
-                        <Select value={galleryForm.isPremium ? 'true' : 'false'} onValueChange={val => setGalleryForm(p => ({ ...p, isPremium: val === 'true', category: '' }))}>
+                        <Select
+                          value={galleryForm.isPremium ? 'true' : 'false'}
+                          onValueChange={val => {
+                            setGalleryForm(p => ({ ...p, isPremium: val === 'true', category: '', allowedPlans: [] }))
+                          }}
+                        >
                           <SelectTrigger className="bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="false">Free</SelectItem>
@@ -2097,6 +2144,39 @@ export default function AdminDashboard() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Plan Access Selector - sirf premium content ke liye */}
+                    {galleryForm.isPremium && (
+                      <div className="space-y-1">
+                        <Label>Kin Plans Ko Dikhao <span className="text-gray-500 text-xs">(koi select na karo = sab)</span></Label>
+                        <div className="flex flex-wrap gap-2">
+                          {plans.map((plan: any) => {
+                            const selected = galleryForm.allowedPlans.includes(plan.id)
+                            return (
+                              <button
+                                key={plan.id}
+                                type="button"
+                                onClick={() => setGalleryForm(p => ({
+                                  ...p,
+                                  allowedPlans: selected
+                                    ? p.allowedPlans.filter(id => id !== plan.id)
+                                    : [...p.allowedPlans, plan.id]
+                                }))}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                                  selected
+                                    ? 'bg-primary border-primary text-white'
+                                    : 'bg-gray-800 border-gray-600 text-gray-300 hover:border-gray-400'
+                                }`}
+                              >
+                                {plan.name} (${plan.price})
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {galleryForm.allowedPlans.length === 0 && (
+                          <p className="text-xs text-gray-500">✅ Sab premium plans wale dekh sakte hain</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setEditingGallery(null)} className="border-gray-700 text-white">Cancel</Button>
@@ -2127,7 +2207,7 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Gallery Management <span className="text-sm font-normal text-gray-400 ml-2">({galleryItems.length} images)</span></CardTitle>
-                    <Button onClick={() => { setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false }); setShowAddGallery(true) }} className="bg-primary hover:bg-primary/90">
+                    <Button onClick={() => { setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] }); setShowAddGallery(true) }} className="bg-primary hover:bg-primary/90">
                       <Plus className="h-4 w-4 mr-2" /> Add content
                     </Button>
                   </div>
@@ -2156,9 +2236,19 @@ export default function AdminDashboard() {
                           </div>
                           <div className="p-2">
                             <p className="text-sm font-medium truncate">{item.title}</p>
-                            <div className="flex gap-1 mt-1">
+                            <div className="flex gap-1 mt-1 flex-wrap">
                               <Badge variant="outline" className="text-xs px-1 py-0">{item.contentType || 'image'}</Badge>
                               <Badge variant={item.isPremium ? 'default' : 'secondary'} className="text-xs px-1 py-0">{item.isPremium ? 'Premium' : 'Free'}</Badge>
+                              {item.allowedPlans && (() => {
+                                try {
+                                  const ids: string[] = JSON.parse(item.allowedPlans)
+                                  if (ids.length > 0) {
+                                    const names = ids.map(id => plans.find((p: any) => p.id === id)?.name || id).join(', ')
+                                    return <Badge variant="outline" className="text-xs px-1 py-0 border-amber-500/50 text-amber-400">{names}</Badge>
+                                  }
+                                } catch {}
+                                return null
+                              })()}
                             </div>
                           </div>
                           <div className="absolute top-2 right-2 hidden group-hover:flex gap-1">
@@ -2167,7 +2257,9 @@ export default function AdminDashboard() {
                               className="h-7 w-7 p-0 bg-gray-900/90"
                               onClick={() => {
                                 setEditingGallery(item)
-                                setGalleryForm({ title: item.title, description: item.description || '', imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl || '', category: item.category || '', isActive: item.isActive, contentType: item.contentType || 'image', isPremium: item.isPremium || false })
+                                let parsedPlans: string[] = []
+                                try { parsedPlans = item.allowedPlans ? JSON.parse(item.allowedPlans) : [] } catch {}
+                                setGalleryForm({ title: item.title, description: item.description || '', imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl || '', category: item.category || '', isActive: item.isActive, contentType: item.contentType || 'image', isPremium: item.isPremium || false, allowedPlans: parsedPlans })
                               }}
                             >
                               <Edit className="h-3 w-3" />

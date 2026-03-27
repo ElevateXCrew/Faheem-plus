@@ -12,6 +12,7 @@ const galleryItemSchema = z.object({
   category: z.string().optional(),
   contentType: z.string().optional(),
   isPremium: z.boolean().optional(),
+  allowedPlans: z.string().optional(), // JSON array of plan IDs
   isActive: z.boolean().optional(),
   displayOrder: z.number().int().optional()
 })
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { title, description, imageUrl, thumbnailUrl, category, isActive, displayOrder, contentType, isPremium } = validation.data
+    const { title, description, imageUrl, thumbnailUrl, category, isActive, displayOrder, contentType, isPremium, allowedPlans } = validation.data
 
     // Get the highest display order if not provided
     let finalDisplayOrder = displayOrder
@@ -137,7 +138,8 @@ export async function POST(request: NextRequest) {
         isActive: isActive ?? true,
         displayOrder: finalDisplayOrder,
         contentType: contentType ?? 'image',
-        isPremium: isPremium ?? false
+        isPremium: isPremium ?? false,
+        allowedPlans: allowedPlans ?? null
       }
     })
 
