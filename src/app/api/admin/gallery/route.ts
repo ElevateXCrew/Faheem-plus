@@ -12,7 +12,7 @@ const galleryItemSchema = z.object({
   category: z.string().optional(),
   contentType: z.string().optional(),
   isPremium: z.boolean().optional(),
-  allowedPlans: z.string().optional(), // JSON array of plan IDs
+  allowedPlans: z.string().nullable().optional(), // JSON array of plan IDs
   isActive: z.boolean().optional(),
   displayOrder: z.number().int().optional()
 })

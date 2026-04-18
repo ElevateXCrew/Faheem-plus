@@ -169,7 +169,7 @@ export default function AdminDashboard() {
     { id: 'special', name: 'Special Requests' },
   ]
 
-  const [galleryForm, setGalleryForm] = useState({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] as string[] })
+  const [galleryForm, setGalleryForm] = useState({ title: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] as string[] })
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadingVideo, setUploadingVideo] = useState(false)
   const [uploadingThumb, setUploadingThumb] = useState(false)
@@ -258,14 +258,13 @@ export default function AdminDashboard() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              title: item.title || item.file.name,
+              title: (item.title || item.file.name).trim() || 'Untitled',
               imageUrl: data.url,
               category: multiSettings.category,
               isPremium: multiSettings.isPremium,
               contentType: multiSettings.contentType,
               isActive: multiSettings.isActive,
-              allowedPlans: multiSettings.allowedPlans.length > 0 ? JSON.stringify(multiSettings.allowedPlans) : null,
-              description: ''
+              allowedPlans: multiSettings.allowedPlans.length > 0 ? JSON.stringify(multiSettings.allowedPlans) : null
             })
           })
         }
@@ -480,7 +479,7 @@ export default function AdminDashboard() {
       if (data.success) {
         setGalleryItems(prev => [data.data, ...prev])
         setShowAddGallery(false)
-        setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] })
+        setGalleryForm({ title: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] })
       } else {
         alert('Add failed: ' + (data.error || 'Unknown error'))
       }
@@ -1902,7 +1901,7 @@ export default function AdminDashboard() {
               {/* Add Gallery Dialog */}
               <Dialog open={showAddGallery} onOpenChange={(open) => { setShowAddGallery(open); if (!open) { setMultiFiles([]); setMultiProgress(0); setMultiSettings({ isPremium: false, category: '', contentType: 'image', isActive: true, allowedPlans: [] }) } }}>
                 <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader><DialogTitle>Add Content</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Add Content</DialogTitle><DialogDescription className="text-gray-400">Upload images or videos to the gallery.</DialogDescription></DialogHeader>
                   <div className="space-y-4 py-2">
 
                     {/* Global Settings */}
@@ -2054,7 +2053,7 @@ export default function AdminDashboard() {
               {/* Edit Gallery Dialog */}
               <Dialog open={!!editingGallery} onOpenChange={open => !open && setEditingGallery(null)}>
                 <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
-                  <DialogHeader><DialogTitle>Edit Gallery Image</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>Edit Gallery Image</DialogTitle><DialogDescription className="text-gray-400">Update gallery item details.</DialogDescription></DialogHeader>
                   <div className="space-y-3 py-2">
                     <div className="space-y-1">
                       <Label>Title</Label>
@@ -2207,7 +2206,7 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Gallery Management <span className="text-sm font-normal text-gray-400 ml-2">({galleryItems.length} images)</span></CardTitle>
-                    <Button onClick={() => { setGalleryForm({ title: '', description: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] }); setShowAddGallery(true) }} className="bg-primary hover:bg-primary/90">
+                    <Button onClick={() => { setGalleryForm({ title: '', imageUrl: '', thumbnailUrl: '', category: '', isActive: true, contentType: 'image', isPremium: false, allowedPlans: [] }); setShowAddGallery(true) }} className="bg-primary hover:bg-primary/90">
                       <Plus className="h-4 w-4 mr-2" /> Add content
                     </Button>
                   </div>
@@ -2259,7 +2258,7 @@ export default function AdminDashboard() {
                                 setEditingGallery(item)
                                 let parsedPlans: string[] = []
                                 try { parsedPlans = item.allowedPlans ? JSON.parse(item.allowedPlans) : [] } catch {}
-                                setGalleryForm({ title: item.title, description: item.description || '', imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl || '', category: item.category || '', isActive: item.isActive, contentType: item.contentType || 'image', isPremium: item.isPremium || false, allowedPlans: parsedPlans })
+                                setGalleryForm({ title: item.title, imageUrl: item.imageUrl, thumbnailUrl: item.thumbnailUrl || '', category: item.category || '', isActive: item.isActive, contentType: item.contentType || 'image', isPremium: item.isPremium || false, allowedPlans: parsedPlans })
                               }}
                             >
                               <Edit className="h-3 w-3" />
