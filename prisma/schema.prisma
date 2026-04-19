@@ -79,6 +79,10 @@ model Subscription {
   rejectedAt  DateTime?
   stripeSessionId String? @unique
   revenue     Float    @default(0) // Revenue from this subscription
+  paymentMethod        String?  // "binance", "stripe"
+  paymentAccountName   String?  // User's account name
+  paymentWalletAddress String?  // User's TRC20 wallet address
+  paymentScreenshotUrl String?  @db.LongText // Screenshot URL
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

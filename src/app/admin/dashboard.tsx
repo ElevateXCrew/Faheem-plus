@@ -139,6 +139,14 @@ export default function AdminDashboard() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [userActionLoading, setUserActionLoading] = useState(false)
 
+  // Payment Requests state
+  const [paymentRequests, setPaymentRequests] = useState<any[]>([])
+  const [paymentRequestsLoading, setPaymentRequestsLoading] = useState(false)
+  const [paymentRequestsTotal, setPaymentRequestsTotal] = useState(0)
+  const [paymentRequestsFilter, setPaymentRequestsFilter] = useState('pending')
+  const [paymentActionLoading, setPaymentActionLoading] = useState<string | null>(null)
+  const [viewingScreenshot, setViewingScreenshot] = useState<string | null>(null)
+
   // Gallery state
   const [galleryItems, setGalleryItems] = useState<any[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
@@ -321,6 +329,7 @@ export default function AdminDashboard() {
       if (activeSection === 'users') fetchUsers(1, '')
       if (activeSection === 'subscriptions') { fetchSubscriptions(1, 'all'); fetchPlansAndUsers() }
       if (activeSection === 'gallery') { fetchGallery(); fetchPlansAndUsers() }
+      if (activeSection === 'payment-requests') fetchPaymentRequests(paymentRequestsFilter)
       if (activeSection === 'plans') fetchAdminPlans()
     }
   }, [activeSection, admin, timeRange, metricType])
@@ -455,6 +464,39 @@ export default function AdminDashboard() {
     } finally {
       setUserActionLoading(false)
     }
+  }
+
+  const fetchPaymentRequests = async (statusFilter = paymentRequestsFilter) => {
+    setPaymentRequestsLoading(true)
+    try {
+      const params = new URLSearchParams({ limit: '50' })
+      if (statusFilter !== 'all') params.set('status', statusFilter)
+      const res = await fetch(`/api/admin/subscriptions?${params}`)
+      const data = await res.json()
+      if (data.success) {
+        // Only show binance payment requests
+        const filtered = data.data.filter((s: any) => s.paymentMethod === 'binance' || s.paymentScreenshotUrl)
+        setPaymentRequests(filtered)
+        setPaymentRequestsTotal(filtered.length)
+      }
+    } catch {}
+    finally { setPaymentRequestsLoading(false) }
+  }
+
+  const handlePaymentAction = async (id: string, action: 'approved' | 'cancelled') => {
+    setPaymentActionLoading(id)
+    try {
+      const res = await fetch(`/api/admin/subscriptions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPaymentRequests(prev => prev.map(s => s.id === id ? { ...s, status: action } : s))
+      }
+    } catch {}
+    finally { setPaymentActionLoading(null) }
   }
 
   const fetchGallery = async () => {
@@ -668,6 +710,17 @@ export default function AdminDashboard() {
     finally { setPlanActionLoading(false) }
   }
 
+  const quickPriceAdjust = async (planId: string, currentPrice: number, delta: number) => {
+    const newPrice = Math.max(0, parseFloat((currentPrice + delta).toFixed(2)))
+    const res = await fetch(`/api/admin/plans?id=${planId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price: newPrice })
+    })
+    const data = await res.json()
+    if (data.success) setAdminPlans(prev => prev.map(p => p.id === planId ? data.plan : p))
+  }
+
   const fetchPlansAndUsers = async () => {
     try {
       const [plansRes, usersRes] = await Promise.all([
@@ -739,6 +792,7 @@ export default function AdminDashboard() {
                 { id: 'likes-views', label: 'Likes & Views', icon: Activity },
                 { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                 { id: 'revenue', label: 'Revenue', icon: DollarSign },
+                { id: 'payment-requests', label: 'Payment Requests', icon: CreditCard },
                 { id: 'gallery', label: 'Gallery', icon: Grid3x3 },
                 { id: 'users', label: 'Users', icon: Users },
                 { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
@@ -1895,6 +1949,131 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Payment Requests Section */}
+          {activeSection === 'payment-requests' && (
+            <div className="space-y-6">
+              {/* Screenshot Lightbox */}
+              {viewingScreenshot && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setViewingScreenshot(null)}>
+                  <img src={viewingScreenshot} className="max-w-full max-h-full rounded-xl shadow-2xl" />
+                </div>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle>Payment Requests <span className="text-sm font-normal text-gray-400 ml-2">({paymentRequestsTotal} total)</span></CardTitle>
+                    <div className="flex gap-2">
+                      <Select value={paymentRequestsFilter} onValueChange={val => { setPaymentRequestsFilter(val); fetchPaymentRequests(val) }}>
+                        <SelectTrigger className="w-36 bg-gray-800 border-gray-700"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {paymentRequestsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : paymentRequests.length === 0 ? (
+                    <p className="text-center py-12 text-muted-foreground">No payment requests found</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {paymentRequests.map((req: any) => (
+                        <div key={req.id} className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-3">
+                          {/* Header Row */}
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div>
+                              <p className="font-semibold text-white">{req.user?.name || 'N/A'}</p>
+                              <p className="text-sm text-gray-400">{req.user?.email}</p>
+                            </div>
+                            <Badge className={
+                              req.status === 'approved' ? 'bg-green-600/20 text-green-400 border border-green-600/30' :
+                              req.status === 'cancelled' ? 'bg-red-600/20 text-red-400 border border-red-600/30' :
+                              'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
+                            }>
+                              {req.status === 'approved' ? '✓ Approved' : req.status === 'cancelled' ? '✗ Cancelled' : '⏳ Pending'}
+                            </Badge>
+                          </div>
+
+                          {/* Plan + Payment Info */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div className="bg-gray-700/50 rounded-lg p-2">
+                              <p className="text-xs text-gray-500">Plan</p>
+                              <p className="font-semibold text-white">{req.plan?.name}</p>
+                              <p className="text-xs text-primary">{req.plan?.currency}{req.plan?.price}/{req.plan?.duration}</p>
+                            </div>
+                            <div className="bg-gray-700/50 rounded-lg p-2">
+                              <p className="text-xs text-gray-500">Payment Method</p>
+                              <p className="font-semibold text-white capitalize">{req.paymentMethod || '—'}</p>
+                            </div>
+                            <div className="bg-gray-700/50 rounded-lg p-2">
+                              <p className="text-xs text-gray-500">Account Name</p>
+                              <p className="font-semibold text-white">{req.paymentAccountName || '—'}</p>
+                            </div>
+                            <div className="bg-gray-700/50 rounded-lg p-2">
+                              <p className="text-xs text-gray-500">Wallet (TRC20)</p>
+                              <p className="font-mono text-xs text-white break-all">{req.paymentWalletAddress || '—'}</p>
+                            </div>
+                          </div>
+
+                          {/* Screenshot + Date + Actions */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-3">
+                              {req.paymentScreenshotUrl ? (
+                                <button onClick={() => setViewingScreenshot(req.paymentScreenshotUrl)} className="relative group">
+                                  <img src={req.paymentScreenshotUrl} className="h-16 w-16 object-cover rounded-lg border border-gray-600 group-hover:border-primary transition-colors" />
+                                  <div className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-white text-xs">View</span>
+                                  </div>
+                                </button>
+                              ) : (
+                                <div className="h-16 w-16 bg-gray-700 rounded-lg flex items-center justify-center">
+                                  <span className="text-xs text-gray-500">No SS</span>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-xs text-gray-500">Submitted</p>
+                                <p className="text-sm text-gray-300">{new Date(req.requestDate || req.createdAt).toLocaleString()}</p>
+                              </div>
+                            </div>
+
+                            {req.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  disabled={paymentActionLoading === req.id}
+                                  onClick={() => handlePaymentAction(req.id, 'approved')}
+                                >
+                                  {paymentActionLoading === req.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="h-4 w-4 mr-1" />Approve</>}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={paymentActionLoading === req.id}
+                                  onClick={() => handlePaymentAction(req.id, 'cancelled')}
+                                >
+                                  {paymentActionLoading === req.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><XCircle className="h-4 w-4 mr-1" />Reject</>}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Gallery Section */}
           {activeSection === 'gallery' && (
             <div className="space-y-6">
@@ -2822,9 +3001,16 @@ export default function AdminDashboard() {
                             <div className="flex items-start justify-between">
                               <div>
                                 <h3 className="font-bold text-lg text-white">{plan.name}</h3>
-                                <Badge variant={plan.isActive == true || plan.isActive == 1 ? 'default' : 'secondary'} className="text-xs mt-1">
-                                  {plan.isActive == true || plan.isActive == 1 ? 'Active' : 'Inactive'}
-                                </Badge>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <Badge variant={plan.isActive == true || plan.isActive == 1 ? 'default' : 'secondary'} className="text-xs">
+                                    {plan.isActive == true || plan.isActive == 1 ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                  {discountedPrice ? (
+                                    <span className="text-sm font-bold text-green-400">{plan.currency}{discountedPrice}<span className="text-xs font-normal text-gray-500">/{plan.duration}</span></span>
+                                  ) : (
+                                    <span className="text-sm font-bold text-white">{plan.currency}{plan.price}<span className="text-xs font-normal text-gray-500">/{plan.duration}</span></span>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex gap-1">
                                 <Button size="sm" variant="outline" className="border-gray-600 text-blue-400 hover:bg-blue-400/10 h-8 w-8 p-0"
@@ -2891,24 +3077,14 @@ export default function AdminDashboard() {
                               <p className="text-xs text-gray-500 mb-2">Quick Price Adjust</p>
                               <div className="flex gap-1">
                                 {[-10, -5, +5, +10].map(delta => (
-                                  <Button key={delta} size="sm"
-                                    variant="outline"
-                                    className={`flex-1 h-7 text-xs border-gray-600 ${
+                                  <button key={delta}
+                                    className={`flex-1 h-7 text-xs rounded border border-gray-600 transition-none ${
                                       delta < 0 ? 'text-red-400 hover:bg-red-400/10' : 'text-green-400 hover:bg-green-400/10'
                                     }`}
-                                    onClick={async () => {
-                                      const newPrice = Math.max(0, parseFloat((plan.price + delta).toFixed(2)))
-                                      const res = await fetch(`/api/admin/plans?id=${plan.id}`, {
-                                        method: 'PATCH',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ price: newPrice })
-                                      })
-                                      const data = await res.json()
-                                      if (data.success) setAdminPlans(prev => prev.map(p => p.id === plan.id ? data.plan : p))
-                                    }}
+                                    onClick={() => quickPriceAdjust(plan.id, plan.price, delta)}
                                   >
                                     {delta > 0 ? `+${delta}` : delta}
-                                  </Button>
+                                  </button>
                                 ))}
                               </div>
                             </div>

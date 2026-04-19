@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { planId } = await request.json()
+    const { planId, paymentMethod, paymentDetails } = await request.json()
 
     if (!planId) {
       return NextResponse.json(
@@ -125,7 +125,11 @@ export async function POST(request: NextRequest) {
     const subscription = await db.subscription.create({
       data: {
         userId: user.id,
-        planId
+        planId,
+        paymentMethod: paymentMethod ?? null,
+        paymentAccountName: paymentDetails?.accountName ?? null,
+        paymentWalletAddress: paymentDetails?.walletAddress ?? null,
+        paymentScreenshotUrl: paymentDetails?.screenshotUrl ?? null,
       },
       include: { plan: true }
     })
