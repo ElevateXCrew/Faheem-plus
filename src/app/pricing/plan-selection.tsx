@@ -17,7 +17,7 @@ interface Plan {
   features: string[]
 }
 
-const WALLET_ADDRESS = 'TD1JUqswyndwYJYEzxkaY'
+const WALLET_ADDRESS = '0x03044267e87def562191ca8318a4d969272967da'
 
 // Separate stable modal component — never re-renders from parent
 const PaymentModal = memo(function PaymentModal({
@@ -146,6 +146,9 @@ const PaymentModal = memo(function PaymentModal({
               </button>
             </div>
             <p className="text-xs text-amber-600 font-medium">⚠ Only send via TRC20 network!</p>
+            <div className="flex justify-center pt-2">
+              <img src="/QR-image/qr.jpg" alt="TRC20 QR Code" className="w-36 h-36 rounded-lg border border-gray-200 dark:border-gray-600" />
+            </div>
           </div>
 
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Your Details:</p>
