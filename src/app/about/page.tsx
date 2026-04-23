@@ -124,11 +124,11 @@ export default function AboutPage() {
               </span>
             </h1>
             <p 
-  className="text-6xl text-white font-bold" 
-  style={{ textShadow: "0 0 10px rgba(255,80,80,0.7)" }}
->
-  High Class Independent Escort in <span className="font-semibold">Birmingham</span>
-</p>
+            className="text-6xl text-white font-bold" 
+            style={{ textShadow: "0 0 10px rgba(255,80,80,0.7)" }}
+          >
+            High Class Independent Escort in <span className="font-semibold">Birmingham</span>
+          </p>
           </div>
         </div>
       </section>
@@ -156,12 +156,12 @@ export default function AboutPage() {
                 Are you looking for an intelligent, passionate companion to create unforgettable memories with? Someone whose charm, energy, and elegance leave a lasting impression? Meet me once — and the experience will stay with you.
                 </p>
                 <p 
-  className="text-lg text-white" 
-  style={{ textShadow: "0 0 8px rgba(255,80,80,0.6)" }}
->
-  I’m <span className="font-bold">Faheem</span>, and I’m not your typical escort — but there’s only one way to truly find out.  
-  I welcome you to my <span className="font-bold">discreet and stylish incall location</span> in <span className="font-bold">Birmingham, Manchester, and London</span>, a beautifully designed modern space created for <span className="font-bold">comfort and private moments</span>.
-</p>
+                className="text-lg text-white" 
+                style={{ textShadow: "0 0 8px rgba(255,80,80,0.6)" }}
+              >
+                I’m <span className="font-bold">Faheem</span>, and I’m not your typical escort — but there’s only one way to truly find out.  
+                I welcome you to my <span className="font-bold">discreet and stylish incall location</span> in <span className="font-bold">Birmingham, Manchester, and London</span>, a beautifully designed modern space created for <span className="font-bold">comfort and private moments</span>.
+              </p>
                 <p>
                   I’m a vibrant fashion model with an adventurous spirit. My passion for fashion, travel, and the arts takes me across Europe and the Middle East — exploring new cultures, stylish scenes, and unforgettable destinations.
                 </p>
@@ -214,7 +214,7 @@ Explore my exclusive photos, adventures, and behind-the-scenes content on my per
                     <Heart className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <div className="font-semibold">Age 26</div>
+                    <div className="font-semibold">Age 19</div>
                     <div className="text-sm text-muted-foreground">UK Based</div>
                   </div>
                 </div>
